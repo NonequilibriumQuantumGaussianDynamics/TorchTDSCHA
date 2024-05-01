@@ -20,40 +20,6 @@ matplotlib.rcParams['ytick.labelsize'] = 13
 
 RyToeV = 13.605703976
 
-def init(nat, T):
-
-
-    nmod = 3*nat
-    phi = np.zeros((nmod, nmod))
-    psi = np.zeros((nmod, nmod, nmod, nmod))
-    
-    R = np.zeros(nmod)
-    P = np.zeros(nmod)
-    masses = np.zeros(nmod)
-
-    C = np.zeros((nmod, nmod))
-
-    # Assign values
-    masses[:] = 911 #m_ry, proton
-    
-    for i in range(nmod):
-        phi[i,i] = -0.1  #Ry/B^2
-        psi[i,i,i,i] = 0.5  #Ry/B^4
-    """
-    psi[0,0,0,1] = 0.1
-    psi[1,0,0,0] = 0.1
-    psi[0,1,0,0] = 0.1
-    psi[0,0,1,0] = 0.1
-    """
-
-    # Scale by masses
-    phi = np.einsum('i,j,ij->ij', 1/np.sqrt(masses), 1/np.sqrt(masses), phi)
-    psi = np.einsum('i,j,k,l,ijkl->ijkl', 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), psi)
-    om, eigv = get_phonons(phi)
-
-    A, B = get_AB(om, eigv, T)
- 
-    return nat, nmod, phi, psi, R, P,  masses, A, B, C
 
 def get_phonons_THz(phi):
     eig, eigv = np.linalg.eig(phi)

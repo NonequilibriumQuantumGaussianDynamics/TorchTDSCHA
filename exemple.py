@@ -3,6 +3,8 @@ import copy
 import matplotlib
 from matplotlib import pyplot as pl
 from model_multi import *
+from init import *
+
 matplotlib.rcParams['axes.labelsize'] = 17
 matplotlib.rcParams['xtick.labelsize'] = 13
 matplotlib.rcParams['ytick.labelsize'] = 13
@@ -14,7 +16,7 @@ Eamp = 0
 om_L = 10
 gamma = 0
 
-nat, nmod, phi, psi, R, P,  masses, A, B, C = init(1,T)
+nat, nmod, phi, psi, R, P,  masses, A, B, C = init(2,T)
 
 R[0] = 0.4
 R, om, A, B = minimize_free_energy(T,phi,psi, R)
