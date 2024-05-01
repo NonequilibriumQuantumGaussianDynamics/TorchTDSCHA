@@ -29,7 +29,7 @@ def read_psi(file):
                     newfc4[3*i:3*i+3, 3*j:3*j+3, 3*k+3, 3*l+3] = fc4[i,j,k,l,:,:,:,:]
     return newfc4
 
-def init(path, T):
+def init_test(path, T):
 
     nmod = 3*nat
     phi = np.zeros((nmod, nmod))
@@ -70,7 +70,7 @@ def init(path, T):
 
 
 
-def init_test(nat, T):
+def init(nat, T):
 
     nmod = 3*nat
     phi = np.zeros((nmod, nmod))
@@ -85,7 +85,7 @@ def init_test(nat, T):
     # Assign values
     masses[:] = 911 #m_ry, proton
     
-    d = -0.1
+    d = 0.1
     for i in range(nmod):
         phi[i,i] = d  #Ry/B^2
         psi[i,i,i,i] = 0.5  #Ry/B^4
@@ -103,7 +103,7 @@ def init_test(nat, T):
     # Scale by masses
     phi = np.einsum('i,j,ij->ij', 1/np.sqrt(masses), 1/np.sqrt(masses), phi)
     psi = np.einsum('i,j,k,l,ijkl->ijkl', 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), psi)
-    om, eigv = get_phonons(phi)
+    om, eigv = get_phonons_r(phi)
 
     A, B = get_AB(om, eigv, T)
 

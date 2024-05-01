@@ -41,15 +41,37 @@ def print_phonons(om):
     print("phonons")
     for i in range(len(om)):
         print("Mode %d" %(i+1), om[i]*241.8*13.6)
- 
-def get_AB(om, eigv, T):
-    K_to_Ry=6.336857346553283e-06
-    arg = om/(T*K_to_Ry)/2.0
 
-    lambd = 1/np.tanh(arg)/(2*om)
+def remove_translations(om, eigv, thr=1e-6):
+    # thr of 1e-6 corresponds to around 0.01 THz and 0.3 cmm1
+    nmod = len(om)
+    nom = copy.deepcopy(om)
+    neigv = copy.deepcopy(eigv)
+    nom = np.abs(nom)
+    mask = np.where(nom>thr)
+    nacoustic = nmod-len(mask[0])
+    if nacoustic:
+        print("WARNING, n acoustic modes = ", nacoustic)
+    nom = nom[mask]
+    neigv = neigv[:,mask]
+    neigv = neigv[:,0,:]
+    return nom, neigv
+    
+ 
+def get_AB(fom, feigv, T):
+    K_to_Ry=6.336857346553283e-06
+ 
+    om, eigv = remove_translations(fom, feigv)
+    if T<0.001:
+        tanh = np.ones(len(om))
+    else:
+        arg = om/(T*K_to_Ry)/2.0
+        tanh = np.tanh(arg)
+
+    lambd = 1/tanh/(2*om)
     A= np.einsum('s,is,js->ij', lambd, eigv, eigv)
 
-    lambd = om/np.tanh(arg)/(2)
+    lambd = om/tanh/(2)
     B= np.einsum('s,is,js->ij', lambd, eigv, eigv)
     return A,B
     
