@@ -16,9 +16,11 @@ Eamp = 0
 om_L = 10
 gamma = 0
 
-nat, nmod, phi, psi, R, P,  masses, A, B, C = init(2,T)
 
-R[0] = 0.0
+
+#nat, nmod, phi, psi, R, P,  masses, A, B, C = init(2,T)
+nat, nmod, phi, psi, R, P,  masses, A, B, C = init_read('../../Downloads/save',T)
+
 R, om, A, B = minimize_free_energy(T,phi,psi, R)
 
 R[0]=0.0

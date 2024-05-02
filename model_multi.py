@@ -42,6 +42,16 @@ def print_phonons(om):
     for i in range(len(om)):
         print("Mode %d" %(i+1), om[i]*241.8*13.6)
 
+def print_phonons_mat(phi):
+    om, eigv = np.linalg.eigh(phi)
+    mask = np.where(om<0)
+    om = np.abs(om)
+    om = np.sqrt(om)
+    om[mask] *= -1
+    print("phonons")
+    for i in range(len(om)):
+        print("Mode %d" %(i+1), om[i]*241.8*13.6, 'THz', om[i]*8065.54429*13.6, 'cmm1')
+
 def remove_translations(om, eigv, thr=1e-6):
     # thr of 1e-6 corresponds to around 0.01 THz and 0.3 cmm1
     nmod = len(om)
@@ -321,13 +331,17 @@ def grad(x, *args):
     A, B = get_AB(om, eigv, T)
     Phi = np.dot(sqPhi,sqPhi)
 
+    print("t0")
     t0 = 1/2*np.einsum('ijkl,k,l->ij', psi ,R ,R)
+    print("t1")
     t1 = 1/2*np.einsum('ijkl,kl->ij', psi ,A)
     
+    print("t2")
     lamb, vect = np.linalg.eigh(A)
     Ttens = np.einsum('s, is,js,ks,ls -> ijkl', lamb, vect, vect, vect, vect)
     t2 = 1/2*np.einsum('bjkl,ajkl->ab', psi, Ttens)
     
+    print("t3")
     gradPhi =  -phi-t0-t1-t2+Phi
     gradPhi = np.dot(sqPhi,gradPhi) + np.dot(gradPhi,sqPhi)
 
@@ -390,7 +404,7 @@ def minimize_free_energy(T,phi,psi, R0):
     print(grad(x0, T, phi, psi))
 
     #res = minimize(F, x0, args = (T,phi,psi))
-    res = minimize(F, x0, args = (T,phi,psi), method = 'CG', jac = grad, tol=1e-12) #options={'gtol':1e-30})
+    res = minimize(F, x0, args = (T,phi,psi), method = 'CG', jac = grad) #options={'gtol':1e-30})
     R, Phi = get_R_Phi(res['x'])
     om, eigv = get_phonons(Phi)
     om = np.abs(om)
