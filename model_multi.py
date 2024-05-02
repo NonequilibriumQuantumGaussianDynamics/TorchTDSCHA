@@ -127,8 +127,9 @@ def av_V(R, A, phi, psi):
     V4 = 1/8*np.einsum('ijkl,ij,kl', psi, A ,A)
     
     lamb, vect = np.linalg.eigh(A)
-    Q = np.einsum('s, is,js,ks,ls -> ijkl', lamb**2, vect, vect, vect, vect)
-    V5 = 1/8*np.einsum('ijkl,ijkl', psi, Q)
+    #Q = np.einsum('s, is,js,ks,ls -> ijkl', lamb**2, vect, vect, vect, vect)
+    #V5 = 1/8*np.einsum('ijkl,ijkl', psi, Q)
+    V5 = 1/8*np.einsum('ijkl,im,jm,km,lm,m', psi, vect, vect, vect, vect, lamb**2, optimize= 'optimal')
 
     return V0 + V1 + V2 + V3 + V4 
 
@@ -331,17 +332,16 @@ def grad(x, *args):
     A, B = get_AB(om, eigv, T)
     Phi = np.dot(sqPhi,sqPhi)
 
-    print("t0")
     t0 = 1/2*np.einsum('ijkl,k,l->ij', psi ,R ,R)
-    print("t1")
     t1 = 1/2*np.einsum('ijkl,kl->ij', psi ,A)
     
-    print("t2")
     lamb, vect = np.linalg.eigh(A)
-    Ttens = np.einsum('s, is,js,ks,ls -> ijkl', lamb, vect, vect, vect, vect)
-    t2 = 1/2*np.einsum('bjkl,ajkl->ab', psi, Ttens)
+    #Ttens = np.einsum('s, is,js,ks,ls -> ijkl', lamb, vect, vect, vect, vect)
+    #t2 = 1/2*np.einsum('bjkl,ajkl->ab', psi, Ttens)
+    psi_bmu = np.einsum('bijk,im,jm,km->bm', psi, vect, vect, vect, optimize="optimal")
+    t2 = np.einsum('bm,am,m->ab', psi_bmu, vect, lamb, optimize="optimal")
     
-    print("t3")
+    
     gradPhi =  -phi-t0-t1-t2+Phi
     gradPhi = np.dot(sqPhi,gradPhi) + np.dot(gradPhi,sqPhi)
 
@@ -397,7 +397,8 @@ def minimize_free_energy(T,phi,psi, R0):
 
     #print('R', R0,'om',  om, 'Ry',  om*13.605*8065.5401, ' cmm1', om*13.605*241.798, 'THz')
     print("Initial phonons")
-    print_phonons(om)
+    #print_phonons(om)
+    print_phonons_mat(Phi0)
 
     x0 = get_x0(R0,Phi0)
     print("Initial gradient") 

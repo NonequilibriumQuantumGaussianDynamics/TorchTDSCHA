@@ -140,6 +140,8 @@ def init_read(path,T):
     phi = read_phi(path)
     phi = phi/Ry_to_eV/A_to_B**2
     phi = np.einsum('i,j,ij->ij', 1/np.sqrt(masses), 1/np.sqrt(masses), phi)
+    print("Check phonons")
+    print_phonons_mat(phi)
 
     psi = read_psi(path)
     psi = psi/Ry_to_eV/A_to_B**4
