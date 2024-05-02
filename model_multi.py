@@ -47,11 +47,10 @@ def remove_translations(om, eigv, thr=1e-6):
     nmod = len(om)
     nom = copy.deepcopy(om)
     neigv = copy.deepcopy(eigv)
-    nom = np.abs(nom)
-    mask = np.where(nom>thr)
+    mask = np.where(np.abs(nom)>thr)
     nacoustic = nmod-len(mask[0])
-    if nacoustic:
-        print("WARNING, n acoustic modes = ", nacoustic)
+    #if nacoustic!=3:
+    #    print("WARNING, n acoustic modes = ", nacoustic)
     nom = nom[mask]
     neigv = neigv[:,mask]
     neigv = neigv[:,0,:]
@@ -74,6 +73,10 @@ def get_AB(fom, feigv, T):
     lambd = om/tanh/(2)
     B= np.einsum('s,is,js->ij', lambd, eigv, eigv)
     return A,B
+
+def inv_Phi(fom, feigv):
+    om, eigv = remove_translations(fom, feigv)
+    return np.einsum('k, ik, jk ->ij', 1/om**2, eigv, eigv)
     
 def force(R,A,phi,psi):
     f1 = np.einsum('ij,j->i', phi, R)  
@@ -119,35 +122,7 @@ def av_V(R, A, phi, psi):
 
     return V0 + V1 + V2 + V3 + V4 
 
-def Lambda(om,eigv,T):
-    
-    nmod = len(om)
-    F0 = np.zeros((nmod,nmod))
-
-    K_to_Ry=6.336857346553283e-06
-    def nb(om,T):
-        if T>1e-3:
-            beta = 1/(T*K_to_Ry)
-            return 1.0/(np.exp(om*beta)-1)
-        else:
-            return 0*om
-    
-    for i in range(nmod):
-        n_mu = nb(om[i],T)
-        for j in range(i,nmod):
-            n_nu = nb(om[j],T)
-            dn_domega_nu = -1/(T*K_to_Ry)*n_nu*(1+n_nu)
-            if j==i:
-                F0[i,i] = 2*((2*n_nu+1)/(2*omega_nu) - dn_domega_nu)
-                F0[i,i] /= om[i]**2
-            else:
-                F0[i,j] = 2*( (n_mu + n_nu + 1)/(om[i] + om[j]) - (n_mu-n_nu)/(om[i]-om[j]) ) / (om[i]*om[j])
-                F0[j,i] = F0[i,j]
-
-    lamb = np.einsum('ij,aj,bi,cj,di->abcd', F0, eigv, eigv, eigv, eigv)  # masses
-    return -8*lamb
  
-
 def get_y0(R,P,A,B,C):
     
     nmod = len(R)
@@ -228,6 +203,24 @@ def get_x0(R,Phi):
 
     return x0
 
+def get_gradx0(R,Phi):
+
+    nmod = len(R)
+    Phi_lin = np.zeros(int((nmod**2+nmod)/2))
+
+    count=0
+    for i in range(nmod):
+        for j in range(i,nmod):
+            Phi_lin[count] = Phi[i,j]
+            count += 1
+
+    x0 = np.zeros(int((nmod**2+3*nmod)/2))
+    x0[:nmod] = R
+    x0[nmod:] = Phi_lin
+
+    return x0
+
+
 def get_R_Phi(x):
 
     nmod = int((-3+np.sqrt(9+8*len(x)))/2)
@@ -260,16 +253,93 @@ def get_R_sqPhi(x):
             count += 1
     return R,sqPhi
 
+    Tmatrix = np.einsum()
+    
+
+def nb(om,T, thr=1e-6):
+    K_to_Ry=6.336857346553283e-06
+    
+    if np.any(om<0):
+        sys.exit("Error, negative frequency in the Bose-Einstein")
+    if T>1e-3:
+        beta = 1/(T*K_to_Ry)
+        bos = np.zeros(len(om))
+        mask = np.where(om>thr)
+        bos[mask] = 1.0/(np.exp(om[mask]*beta)-1)
+        #print('here')
+        #print(om)
+        #print(bos)
+        return bos
+    else:
+        return 0*om
+
+def Lambda(om,eigv,T, thr=1e-6):
+    
+    nmod = len(om)
+    F0 = np.zeros((nmod,nmod))
+
+    K_to_Ry=6.336857346553283e-06
+    
+    for i in range(nmod):
+        if np.abs(om[i])<thr:
+            F[i,:] = 0
+            F[:,i] = 0
+        else:
+            n_mu = nb(om[i],T)
+            for j in range(i,nmod):
+                if np.abs(om[i])>=thr:
+                    n_nu = nb(om[j],T)
+                    dn_domega_nu = -1/(T*K_to_Ry)*n_nu*(1+n_nu)
+                    if j==i:
+                        F0[i,i] = 2*((2*n_nu+1)/(2*omega[j]) - dn_domega_nu)
+                        F0[i,i] /= om[i]**2
+                    else:
+                        F0[i,j] = 2*( (n_mu + n_nu + 1)/(om[i] + om[j]) - (n_mu-n_nu)/(om[i]-om[j]) ) / (om[i]*om[j])
+                        F0[j,i] = F0[i,j]
+
+    lamb = np.einsum('ij,aj,bi,cj,di->abcd', F0, eigv, eigv, eigv, eigv)  # masses
+    return -8*lamb
+
 def dAdPhi(x, *args):
     
     T, phi, psi  = args
 
-    R, Phi = get_R_Phi(x)
-    om, eigv = get_phonons(Phi)
-    A, B = get_AB(om, eigv, T)
+    R, Phi = get_R_sqPhi(x)
+    om, eigv = np.linalg.eigv(sqPhi)
+    om = np.abs(om)
+    #A, B = get_AB(om, eigv, T)
 
     lambd = Lambda(om, eigv, T)
-    Tmatrix = np.einsum()
+
+def grad(x, *args):
+    
+    T, phi, psi  = args
+
+    R, sqPhi = get_R_sqPhi(x)
+    om, eigv = np.linalg.eig(sqPhi)
+    om = np.abs(om)
+    A, B = get_AB(om, eigv, T)
+    Phi = np.dot(sqPhi,sqPhi)
+
+    t0 = 1/2*np.einsum('ijkl,k,l->ij', psi ,R ,R)
+    t1 = 1/2*np.einsum('ijkl,kl->ij', psi ,A)
+    
+    lamb, vect = np.linalg.eig(A)
+    Ttens = np.einsum('s, is,js,ks,ls -> ijkl', lamb, vect, vect, vect, vect)
+    t2 = 1/2*np.einsum('bjkl,ajkl->ab', psi, Ttens)
+    
+    gradPhi =  -phi-t0-t1-t2+Phi
+    gradPhi = np.dot(sqPhi,gradPhi) + np.dot(gradPhi,sqPhi)
+
+    forc = force(R,A,phi,psi)
+    Phi_inv = inv_Phi(om, eigv)
+    gradR = np.dot(Phi_inv, forc)
+
+    gradx = get_gradx0(R,Phi)
+    print(gradx)
+    sys.exit()
+
+    return gradx
     
 
 def F(x,*args):
@@ -285,14 +355,8 @@ def F(x,*args):
 
     T, phi, psi  = args
 
-    K_to_Ry=6.336857346553283e-06
-    def nb(om,T):
-        if T>1e-3:
-            beta = 1/(T*K_to_Ry)
-            return 1.0/(np.exp(om*beta)-1)
-        else:
-            return 0*om
 
+    K_to_Ry=6.336857346553283e-06
     F_harm = om/2.0 - T*K_to_Ry*np.log(1+nb(om,T))
     F_harm = np.sum(F_harm)
 
@@ -319,7 +383,8 @@ def minimize_free_energy(T,phi,psi, R0):
 
     x0 = get_x0(R0,Phi0)
 
-    res = minimize(F, x0, args = (T,phi,psi))
+    #res = minimize(F, x0, args = (T,phi,psi))
+    res = minimize(F, x0, args = (T,phi,psi), method = 'CG', jac = grad)
     R, Phi = get_R_Phi(res['x'])
     om, eigv = get_phonons(Phi)
     om = np.abs(om)
