@@ -22,20 +22,20 @@ RyToeV = 13.605703976
 
 
 def get_phonons_THz(phi):
-    eig, eigv = np.linalg.eig(phi)
-    eig = np.sqrt(eig)*13.6*241.8
-    return eig, eigv
+    om, eigv = np.linalg.eigh(phi)
+    om = np.sqrt(om)*13.6*241.8
+    return om, eigv
 
 def get_phonons(phi):
-    eig, eigv = np.linalg.eig(phi)
-    eig = np.sqrt(eig)
-    return eig, eigv
+    om, eigv = np.linalg.eigh(phi)
+    om = np.sqrt(om)
+    return om, eigv
 
 def get_phonons_r(phi):
-    eig, eigv = np.linalg.eig(phi)
-    eig = np.abs(eig)
-    eig = np.sqrt(eig)
-    return eig, eigv
+    om, eigv = scipy.linalg.eigh(phi)
+    om = np.abs(om)
+    om = np.sqrt(om)
+    return om, eigv
 
 def print_phonons(om):
     print("phonons")
@@ -116,7 +116,7 @@ def av_V(R, A, phi, psi):
     V3 = 1/4*np.einsum('ijkl,i,j,kl', psi, R ,R ,A)
     V4 = 1/8*np.einsum('ijkl,ij,kl', psi, A ,A)
     
-    lamb, vect = np.linalg.eig(A)
+    lamb, vect = np.linalg.eigh(A)
     Q = np.einsum('s, is,js,ks,ls -> ijkl', lamb**2, vect, vect, vect, vect)
     V5 = 1/8*np.einsum('ijkl,ijkl', psi, Q)
 
@@ -316,7 +316,7 @@ def grad(x, *args):
     T, phi, psi  = args
 
     R, sqPhi = get_R_sqPhi(x)
-    om, eigv = np.linalg.eig(sqPhi)
+    om, eigv = np.linalg.eigh(sqPhi)
     om = np.abs(om)
     A, B = get_AB(om, eigv, T)
     Phi = np.dot(sqPhi,sqPhi)
@@ -324,7 +324,7 @@ def grad(x, *args):
     t0 = 1/2*np.einsum('ijkl,k,l->ij', psi ,R ,R)
     t1 = 1/2*np.einsum('ijkl,kl->ij', psi ,A)
     
-    lamb, vect = np.linalg.eig(A)
+    lamb, vect = np.linalg.eigh(A)
     Ttens = np.einsum('s, is,js,ks,ls -> ijkl', lamb, vect, vect, vect, vect)
     t2 = 1/2*np.einsum('bjkl,ajkl->ab', psi, Ttens)
     
@@ -335,9 +335,10 @@ def grad(x, *args):
     Phi_inv = inv_Phi(om, eigv)
     gradR = np.dot(Phi_inv, forc)
 
-    gradx = get_gradx0(R,Phi)
-    print(gradx)
-    sys.exit()
+    gradx = get_gradx0(gradR, gradPhi)
+    print("Gradient", np.linalg.norm(gradx))
+    print("Condition", np.linalg.norm(Phi-kappa(R,A,phi, psi)))
+    print("Condition", np.linalg.norm(B-np.dot(A,kappa(R,A,phi, psi))))
 
     return gradx
     
@@ -347,7 +348,7 @@ def F(x,*args):
     R, sqPhi = get_R_sqPhi(x)
     nmod = len(R)
 
-    om, eigv = np.linalg.eig(sqPhi)
+    om, eigv = np.linalg.eigh(sqPhi)
     om = np.abs(om)
     Phi = np.dot(sqPhi,sqPhi)
 
@@ -376,19 +377,28 @@ def minimize_free_energy(T,phi,psi, R0):
     om, eigv = get_phonons_r(Phi0) # Absolute value at first trial!
 
     A, B = get_AB(om, eigv, T)
-    Phi0 = kappa(R0,A,phi,psi)
+    #Phi0 = kappa(R0,A,phi,psi)
     om, eigv = get_phonons_r(Phi0) # Same here
-    Phi0 = np.einsum('k,ik,jk->ij', om, eigv, eigv) # Now regularize Phi0 
-    print('R', R0,'om',  om, 'Ry',  om*13.605*8065.5401, ' cmm1', om*13.605*241.798, 'THz')
+    Phi0 = np.einsum('k,ik,jk->ij', om**2, eigv, eigv) # Now regularize Phi0 
+
+    #print('R', R0,'om',  om, 'Ry',  om*13.605*8065.5401, ' cmm1', om*13.605*241.798, 'THz')
+    print("Initial phonons")
+    print_phonons(om)
 
     x0 = get_x0(R0,Phi0)
+    print("Initial gradient") 
+    print(grad(x0, T, phi, psi))
 
     #res = minimize(F, x0, args = (T,phi,psi))
-    res = minimize(F, x0, args = (T,phi,psi), method = 'CG', jac = grad)
+    res = minimize(F, x0, args = (T,phi,psi), method = 'CG', jac = grad, tol=1e-12) #options={'gtol':1e-30})
     R, Phi = get_R_Phi(res['x'])
     om, eigv = get_phonons(Phi)
     om = np.abs(om)
-    print('R', R,'om',  om, 'Ry',  om*13.605*8065.5401, ' cmm1', om*13.605*241.798, 'THz')
+
+    print("Final phonons")
+    print_phonons(om)
+
+    #print('R', R,'om',  om, 'Ry',  om*13.605*8065.5401, ' cmm1', om*13.605*241.798, 'THz')
     print(res)
     print(F(res['x'], T,phi,psi))
     A, B = get_AB(om, eigv, T)
@@ -397,7 +407,6 @@ def minimize_free_energy(T,phi,psi, R0):
     forc = force(R,A, phi,psi)
     print('check f', np.linalg.norm(forc))
     print('check A', np.linalg.norm(B-np.dot( A, kap)))
-    sys.exit()
     return R, om, A, B
 
 
