@@ -4,6 +4,7 @@ import h5py
 from model_multi import *
 from ase.io.vasp import read_vasp
 
+
 def read_phi(path):
     f2 = h5py.File(path+'/fc2.hdf5', 'r')
     fc2 = f2['fc2']
@@ -153,3 +154,38 @@ def init_read(path,T):
 
     return nat, nmod, phi, psi, R, P,  masses, A, B, C
 
+
+def load_from_sscha(dyn_file, path, T):
+
+    Ry_to_eV = 13.60570397
+    uma_to_Ry = 911.444175
+    A_to_B = 1.889725988
+
+    import cellconstructor as CC, cellconstructor.Phonons
+
+    dyn = CC.Phonons.Phonons(dyn_file)
+    
+    masses = dyn.structure.get_masses_array()
+    masses = np.repeat(masses,3)
+
+    positions = dyn.structure.coords
+    nat = len(positions)
+    nmod = 3*nat
+    R = np.reshape(positions, nmod) * A_to_B
+
+    phi = read_phi(path)
+    phi = phi/Ry_to_eV/A_to_B**2
+    phi = np.einsum('i,j,ij->ij', 1/np.sqrt(masses), 1/np.sqrt(masses), phi)
+
+    psi = read_psi(path)
+    psi = psi/Ry_to_eV/A_to_B**4
+    psi = np.einsum('i,j,k,l,ijkl->ijkl', 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), psi)
+
+    P = np.zeros(nmod)
+    C = np.zeros((nmod, nmod))
+
+    om, eigv =  dyn.DiagonalizeSupercell()
+
+    A, B = get_AB(om, eigv, T)
+
+    return nat, nmod, phi, psi, R, P,  masses, A, B, C
