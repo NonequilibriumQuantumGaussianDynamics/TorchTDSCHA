@@ -19,9 +19,10 @@ gamma = 0
 
 
 #nat, nmod, phi, psi, R, P,  masses, A, B, C = init(2,T)
-nat, nmod, phi, psi, R, P,  masses, A, B, C = init_read('../../Downloads/save',T)
+#nat, nmod, phi, psi, R, P,  masses, A, B, C = init_read('./save',T)
+nat, nmod, phi, psi, R, P,  masses, A, B, C = load_from_sscha('./save',T)
 
-R, om, A, B = minimize_free_energy(T,phi,psi, R)
+#R, om, A, B = minimize_free_energy(T,phi,psi, R)
 
 R[0]=0.0
 t, sol    = td_evolution(R, P, A, B, C,  Eamp, om_L, gamma, phi, psi, Time, NS)

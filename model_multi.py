@@ -152,6 +152,7 @@ def get_y0(R,P,A,B,C):
 
 def func(y,t, phi, psi, Eamp, om_L, gamma):
 
+    print("time ", t*4.8377687*1e-2)
     nmod = int((-2 + np.sqrt(4+12*len(y)))/6)
 
     R = y[:nmod]    
