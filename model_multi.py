@@ -237,12 +237,13 @@ def td_evolution(R, P, A, B, C,  field, gamma, phi, psi, masses, Time, NS, y0=No
         sol = solve_ivp(func, tspan, y0, args=(phi, psi, field, gamma, masses))
         save(label+'_%d' %i, sol.t, sol.y)
 
-        y0 = sol.y[-1,:]
+        y0 = sol.y[:,-1]
         init_t+=Time
 
     return t, sol
 
 def save(label, t, sol):
+    sol = np.transpose(sol)
     sh = np.shape(sol)
     sh = [sh[0],sh[1]+1]
     y = np.zeros(sh)
