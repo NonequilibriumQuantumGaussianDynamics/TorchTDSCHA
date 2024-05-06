@@ -171,9 +171,12 @@ def load_from_sscha(dyn_file, path, T):
     masses = np.repeat(masses,3)
 
     positions = dyn.structure.coords
+    atoms = read_vasp(path + "/SPOSCAR")
+    
+
     nat = len(positions)
     nmod = 3*nat
-    R = np.reshape(positions, nmod) * A_to_B
+    R = np.reshape(positions-atoms.positions, nmod) * A_to_B
 
     phi = read_phi(path)
     phi = phi/Ry_to_eV/A_to_B**2
@@ -191,3 +194,47 @@ def load_from_sscha(dyn_file, path, T):
     A, B = get_AB(om, eigv, T)
 
     return nat, nmod, phi, psi, R, P,  masses, A, B, C
+
+
+def read_charges(path):
+
+    ff = open(path)
+    lines = ff.readlines()
+    ff.close()
+
+    for i in range(len(lines)):
+        if 'number of atoms/cell' in lines[i]:
+            nat = int(lines[i].split()[-1])
+        if 'Effective charges (d Force / dE) in cartesian axis with asr applied' in lines[i]:
+            Zeff = []
+            for j in range(nat):
+                charge = []
+                for l in range(3):
+                    k = i +4*j + 2 + l
+                    line = lines[k].split()
+                    charge.append( [float(line[2]), float(line[3]), float(line[4])])
+                Zeff.append(charge)
+
+            Zeff = np.array(Zeff)
+            for i in range(3):
+                print("check ", i+1, np.sum(Zeff[:,i]))
+        if 'Dielectric constant in cartesian axis' in lines[i]:
+            eps = float(lines[i+2].split()[1])
+    return Zeff, eps
+
+
+def read_solution(label, chunks):
+    for i in range(chunks):
+        fil = np.load(label + '_%d.npy' %i)
+        sh = np.shape(fil)
+        N0 = sh[0]
+        if i==0:
+            y = np.zeros((N0*chunks, sh[1]))
+        y[N0*i:N0*(i+1),:] = fil
+    t = y[:,0]
+    sol = y[:,1:]
+    return t, sol
+
+
+
+            

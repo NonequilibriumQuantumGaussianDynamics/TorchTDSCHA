@@ -101,12 +101,42 @@ def f_classic(R,phi,psi):
 
     return -f1-f3
 
-def ext_for(t, Eamp, om_L, nmod):
-    Eeff = Eamp * 2.7502067*1e-7  * 2 /(1+np.sqrt(6))
+def ext_for(t, field, masses):
+
+    Eamp = field['amp']
+    om_L = field['freq']
+    edir = field['edir']
+    t0 = field['t0']
+    sig = field['sig']
+    case = field['type']
+    Zeff = field['Zeff']
+    eps = field['eps']
+    
+    if np.abs(np.linalg.norm(edir) - 1) > 1e-7:
+        sys.exit("Direction not normalized")
+
+    Eeff = Eamp * 2.7502067*1e-7  * 2 /(1+np.sqrt(eps))
     freq = om_L/(2.0670687*1e4)
 
-    Zeff = np.ones(nmod)
-    return Zeff*Eeff*np.sin(2*np.pi*freq*t)
+    nat = len(Zeff)
+    nmod = 3*nat
+
+    force = []
+    for i in range(nat):
+        force.append(np.dot(Zeff[i], edir)*Eeff*np.sqrt(2))
+    force = np.array(force)
+    force = np.reshape(force, nmod)
+    force = force / np.sqrt(masses)
+
+
+    if case=='sine':
+        return force*np.sin(2*np.pi*freq*t)
+    elif case=='gaussian1':
+        t0 = t0/(4.8377687*1e-2)
+        sig = 1/(2*np.pi*freq)
+        return -force * (t-t0)/sig * np.exp(-0.5*(t-t0)**2/sig**2 + 0.5)
+    else:
+        sys.exit("Field not implemented")
 
 def kappa(R, A, phi, psi):
     k1 = 1/2*np.einsum('ijkl, k,l->ij', psi, R, R)
@@ -151,7 +181,7 @@ def get_y0(R,P,A,B,C):
     
     return(y0)
 
-def func(y,t, phi, psi, Eamp, om_L, gamma):
+def func(y,t, phi, psi, field, gamma, masses):
 
     print("time ", t*4.8377687*1e-2)
     nmod = int((-2 + np.sqrt(4+12*len(y)))/6)
@@ -174,7 +204,7 @@ def func(y,t, phi, psi, Eamp, om_L, gamma):
     ydot = np.zeros(len(y))
 
     ydot[:nmod] = P
-    ydot[nmod:2*nmod] = f + ext_for(t, Eamp, om_L, nmod)
+    ydot[nmod:2*nmod] = f + ext_for(t, field, masses)
 
     Adot = C + np.transpose(C)
     Bdot = -np.dot(curv, C)
@@ -187,15 +217,38 @@ def func(y,t, phi, psi, Eamp, om_L, gamma):
 
     return ydot
 
-def td_evolution(R, P, A, B, C,  Eamp, om_L, gamma, phi, psi, Time, NS):
+def td_evolution(R, P, A, B, C,  field, gamma, phi, psi, masses, Time, NS, y0=None, init_t=0, chunks=1, label="solution"):
     # om_L in THz, Time in fs
 
+    init_t = init_t/(4.8377687*1e-2)
     Time = Time/(4.8377687*1e-2)
+    Time = Time/chunks
+    NS = int(NS/chunks)
 
-    t = np.linspace(0,Time,NS)
-    y0 = get_y0(R,P,A,B,C)
-    sol = odeint(func, y0, t, args=(phi, psi, Eamp, om_L, gamma))
+    if y0 is None:
+        y0 = get_y0(R,P,A,B,C)
+
+    for i in range(chunks):
+        print("Chunk", i)
+ 
+        t = np.linspace(init_t,init_t+Time,NS)
+        sol = odeint(func, y0, t, args=(phi, psi, field, gamma, masses))
+        save(label+'_%d' %i, t, sol)
+
+        y0 = sol[-1,:]
+        init_t+=Time
+
     return t, sol
+
+def save(label, t, sol):
+    sh = np.shape(sol)
+    sh = [sh[0],sh[1]+1]
+    y = np.zeros(sh)
+    y[:,0] = t
+    y[:,1:] = sol
+    np.save(label,y)
+
+
 
 def get_x0(R,Phi):
 
@@ -381,6 +434,8 @@ def F(x,*args):
     avg_V = av_V(R,A,phi,psi)
     V_harm = 1/2*np.einsum('ij,ij', A, Phi)
     avg_V -= V_harm
+    
+    print("Iter ", F_harm + avg_V)
 
     return F_harm + avg_V
 
@@ -390,9 +445,10 @@ def minimize_free_energy(T,phi,psi, R0):
 
     Phi0 = d2V(R0,phi,psi)
     om, eigv = get_phonons_r(Phi0) # Absolute value at first trial!
+    print_phonons_mat(Phi0)
 
     A, B = get_AB(om, eigv, T)
-    #Phi0 = kappa(R0,A,phi,psi)
+    Phi0 = kappa(R0,A,phi,psi)
     om, eigv = get_phonons_r(Phi0) # Same here
     Phi0 = np.einsum('k,ik,jk->ij', om**2, eigv, eigv) # Now regularize Phi0 
 
@@ -407,6 +463,7 @@ def minimize_free_energy(T,phi,psi, R0):
 
     #res = minimize(F, x0, args = (T,phi,psi))
     res = minimize(F, x0, args = (T,phi,psi), method = 'CG', jac = grad) #options={'gtol':1e-30})
+    #res = minimize(F, x0, args = (T,phi,psi), method = 'CG') #options={'gtol':1e-30})
     R, Phi = get_R_Phi(res['x'])
     om, eigv = get_phonons(Phi)
     om = np.abs(om)
@@ -425,6 +482,66 @@ def minimize_free_energy(T,phi,psi, R0):
     print('check A', np.linalg.norm(B-np.dot( A, kap)))
     return R, om, A, B
 
+
+def iter_minimiz(T,phi,psi, R0, maxiter=10):
+
+    K_to_Ry=6.336857346553283e-06
+    nmod = len(R0)
+
+    Phi0 = d2V(R0,phi,psi)
+
+    """
+    om, eigv = get_phonons(Phi0)
+    om, eigv = remove_translations(om, eigv)
+    nmod = len(om)
+
+    phimm = np.einsum('ij,im,jm->m', phi, eigv, eigv)
+    psimm = np.einsum('ijkl, im ,jm, km, lm-> m', psi, eigv, eigv, eigv, eigv, optimize=True)
+    
+    def obj(x, *args):
+
+        ph, ps, T = args
+        if T<0.001:
+            tanh = x
+        else:
+            arg = x/(T*K_to_Ry)/2.0
+            tanh = np.tanh(arg)
+
+        lambd = 1/tanh/(2*x)
+        #print(lambd, T*K_to_Ry/x**2)
+        return x**2 - ph - 1/2*ps*lambd
+
+    newom = []
+    for i in range(nmod):
+        phi0 = (phimm[i]+np.sqrt(phimm[i]**2+2*psimm[i]*T*K_to_Ry))/2
+        res = scipy.optimize.fsolve(obj, phi0, args = (phimm[i], psimm[i], T))
+        ph = phimm[i]
+        ps = psimm[i]
+        print("phi ", phimm[i])
+        print("psi ", psimm[i])
+        arg = res[0]/(T*K_to_Ry)/2.0
+        tanh = np.tanh(arg)
+        lambd = 1/tanh/(2*res[0])
+        #print("fact", K_to_Ry*T/res[0], lambd)
+        #print(obj(np.sqrt(phi0), ph, ps, T), obj(res[0], ph, ps, T))
+        print(om[i]*13.6*241.8, res[0]*13.6*241.8,np.sqrt(phi0)*13.6*241.8)
+        newom.append(res[0])
+    newom =np.array(newom)
+    Phi0 = np.einsum('s, is, js-> ij', newom**2, eigv, eigv)
+    """
+
+    for i in range(maxiter):
+        om, eigv = get_phonons_r(Phi0) # Absolute value at first trial!
+        A, B = get_AB(om, eigv, T)
+        kap = kappa(R0,A,phi,psi)
+        check = np.linalg.norm(B-np.dot( A, kap))
+        print("Iter", i+1, check)
+        if check < 1e-7:
+            print("Optimization successfull")
+            return A
+        Phi0 = kap
+        print_phonons_mat(Phi0)
+    sys.exit("Optimization not succesful")
 
 def F_pos(x,*args):
 
