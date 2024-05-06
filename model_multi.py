@@ -181,7 +181,7 @@ def get_y0(R,P,A,B,C):
     
     return(y0)
 
-def func(y,t, phi, psi, field, gamma, masses):
+def func(t,y, phi, psi, field, gamma, masses):
 
     print("time ", t*4.8377687*1e-2)
     nmod = int((-2 + np.sqrt(4+12*len(y)))/6)
@@ -232,7 +232,8 @@ def td_evolution(R, P, A, B, C,  field, gamma, phi, psi, masses, Time, NS, y0=No
         print("Chunk", i)
  
         t = np.linspace(init_t,init_t+Time,NS)
-        sol = odeint(func, y0, t, args=(phi, psi, field, gamma, masses))
+        #sol = odeint(func, y0, tfirst=True,  t, args=(phi, psi, field, gamma, masses))
+        sol = solve_ivp(func, t, y0, args=(phi, psi, field, gamma, masses))
         save(label+'_%d' %i, t, sol)
 
         y0 = sol[-1,:]
@@ -247,7 +248,6 @@ def save(label, t, sol):
     y[:,0] = t
     y[:,1:] = sol
     np.save(label,y)
-    print()
 
 
 
