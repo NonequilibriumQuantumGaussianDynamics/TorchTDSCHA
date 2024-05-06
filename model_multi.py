@@ -231,12 +231,13 @@ def td_evolution(R, P, A, B, C,  field, gamma, phi, psi, masses, Time, NS, y0=No
     for i in range(chunks):
         print("Chunk", i)
  
-        t = np.linspace(init_t,init_t+Time,NS)
+        #t = np.linspace(init_t,init_t+Time,NS)
         #sol = odeint(func, y0, tfirst=True,  t, args=(phi, psi, field, gamma, masses))
-        sol = solve_ivp(func, t, y0, args=(phi, psi, field, gamma, masses))
-        save(label+'_%d' %i, t, sol)
+        tspan = [init_t,init_t+Time]
+        sol = solve_ivp(func, tspan, y0, args=(phi, psi, field, gamma, masses))
+        save(label+'_%d' %i, sol.t, sol.y)
 
-        y0 = sol[-1,:]
+        y0 = sol.y[-1,:]
         init_t+=Time
 
     return t, sol
