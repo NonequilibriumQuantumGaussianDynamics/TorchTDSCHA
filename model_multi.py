@@ -240,7 +240,7 @@ def td_evolution(R, P, A, B, C,  field, gamma, phi, psi, masses, Time, NS, y0=No
         y0 = sol.y[:,-1]
         init_t+=Time
 
-    return t, sol
+    return sol
 
 def save(label, t, sol):
     sol = np.transpose(sol)
