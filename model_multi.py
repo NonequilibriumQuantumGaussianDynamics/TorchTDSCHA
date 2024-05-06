@@ -247,6 +247,7 @@ def save(label, t, sol):
     y[:,0] = t
     y[:,1:] = sol
     np.save(label,y)
+    print()
 
 
 
