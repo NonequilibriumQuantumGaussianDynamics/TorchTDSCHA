@@ -168,6 +168,10 @@ def ext_for(t, field, masses):
         t0 = t0/(4.8377687*1e-2)
         sig = 1/(2*np.pi*freq)
         return -force * (t-t0)/sig * np.exp(-0.5*(t-t0)**2/sig**2 + 0.5)
+    elif case=='pulse':
+        t0 = t0/(4.8377687*1e-2)
+        sig = sig/(4.8377687*1e-2)
+        return -force * np.cos(2*np.pi*freq*(t-t0)) * np.exp(-0.5*(t-t0)**2/sig**2)
     else:
         sys.exit("Field not implemented")
 
