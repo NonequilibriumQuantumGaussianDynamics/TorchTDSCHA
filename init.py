@@ -21,6 +21,21 @@ def read_phi(path):
     newfc2 = np.reshape(np.transpose(fc2, [0,2,1,3]),(3*nat, 3*nat))
     return newfc2
 
+def read_chi(path):
+    f3 = h5py.File(path+'/fc3.hdf5', 'r')
+    fc3 = f3['fc3']
+    nat = np.shape(fc3)[0]
+
+    """
+    newfc2 = np.zeros((3*nat,3*nat))
+    for i in range(nat):
+        for j in range(nat):
+            newfc2[3*i:3*i+3, 3*j:3*j+3] = fc2[i,j,:,:]
+    """
+
+    newfc3 = np.reshape(np.transpose(fc3, [0,3,1,4,2,5]),(3*nat, 3*nat, 3*nat))
+    return newfc3
+
 def read_psi(path):
     f4 = h5py.File(path+'/fc4.hdf5', 'r')
     fc4 = f4['fc4']
@@ -157,13 +172,15 @@ def init_read(path,T):
     return nat, nmod, phi, psi, R, P,  masses, A, B, C
 
 
-def load_from_sscha(dyn_file, path, T):
+def load_from_sscha(dyn_file, path, T, read_corrected = False, path_corrected = ''):
 
     Ry_to_eV = 13.60570397
     uma_to_Ry = 911.444175
     A_to_B = 1.889725988
 
     import cellconstructor as CC, cellconstructor.Phonons
+
+    print("WARNING: the fine dyn has tho have the same atomic ordering as the SPOSCAR")
 
     dyn = CC.Phonons.Phonons(dyn_file)
     
@@ -178,13 +195,30 @@ def load_from_sscha(dyn_file, path, T):
     nmod = 3*nat
     R = np.reshape(positions-atoms.positions, nmod) * A_to_B
 
-    phi = read_phi(path)
-    phi = phi/Ry_to_eV/A_to_B**2
-    phi = np.einsum('i,j,ij->ij', 1/np.sqrt(masses), 1/np.sqrt(masses), phi)
+    if not read_corrected:
+        phi = read_phi(path)
+        phi = phi/Ry_to_eV/A_to_B**2
+        phi = np.einsum('i,j,ij->ij', 1/np.sqrt(masses), 1/np.sqrt(masses), phi)
 
-    psi = read_psi(path)
-    psi = psi/Ry_to_eV/A_to_B**4
-    psi = np.einsum('i,j,k,l,ijkl->ijkl', 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), psi)
+        chi = read_chi(path)
+        chi = chi/Ry_to_eV/A_to_B**3
+        chi = np.einsum('i,j,k,ijk->ijk', 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), chi)
+
+        psi = read_psi(path)
+        psi = psi/Ry_to_eV/A_to_B**4
+        psi = np.einsum('i,j,k,l,ijkl->ijkl', 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), psi)
+    else:
+        phi = np.load(path_corrected + '/phi.npy')
+        #phi = phi/Ry_to_eV/A_to_B**2
+        phi = np.einsum('i,j,ij->ij', 1/np.sqrt(masses), 1/np.sqrt(masses), phi)
+
+        chi = np.load(path_corrected + '/chi.npy')
+        #chi = chi/Ry_to_eV/A_to_B**3
+        chi = np.einsum('i,j,k,ijk->ijk', 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), chi)
+
+        psi = np.load(path_corrected + '/psi.npy')
+        #psi = psi/Ry_to_eV/A_to_B**4
+        psi = np.einsum('i,j,k,l,ijkl->ijkl', 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), 1/np.sqrt(masses), psi)
 
     P = np.zeros(nmod)
     C = np.zeros((nmod, nmod))
@@ -193,7 +227,7 @@ def load_from_sscha(dyn_file, path, T):
 
     A, B = get_AB(om, eigv, T)
 
-    return nat, nmod, phi, psi, R, P,  masses, A, B, C
+    return nat, nmod, phi, chi, psi, R, P,  masses, A, B, C
 
 
 def read_charges(path):
@@ -210,7 +244,7 @@ def read_charges(path):
             for j in range(nat):
                 charge = []
                 for l in range(3):
-                    k = i +4*j + 2 + l
+                    k = i +4*j + 3 + l
                     line = lines[k].split()
                     charge.append( [float(line[2]), float(line[3]), float(line[4])])
                 Zeff.append(charge)

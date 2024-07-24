@@ -37,6 +37,13 @@ def get_phonons_r(phi):
     om = np.sqrt(om)
     return om, eigv
 
+def regularize(phi):
+    om, eigv = scipy.linalg.eigh(phi)
+    om = np.abs(om)
+
+    phi = np.einsum('s, is, js -> ij', om, eigv, eigv)
+    return phi
+
 def print_phonons(om):
     print("phonons")
     for i in range(len(om)):
@@ -44,6 +51,7 @@ def print_phonons(om):
 
 def print_phonons_mat(phi):
     om, eigv = np.linalg.eigh(phi)
+    print(om )
     mask = np.where(om<0)
     om = np.abs(om)
     om = np.sqrt(om)
@@ -59,8 +67,29 @@ def remove_translations(om, eigv, thr=1e-6):
     neigv = copy.deepcopy(eigv)
     mask = np.where(np.abs(nom)>thr)
     nacoustic = nmod-len(mask[0])
-    #if nacoustic!=3:
-    #    print("WARNING, n acoustic modes = ", nacoustic)
+    if nacoustic!=3:
+        print("WARNING, n acoustic modes = ", nacoustic)
+    nom = nom[mask]
+    neigv = neigv[:,mask]
+    neigv = neigv[:,0,:]
+    return nom, neigv
+
+def remove_translations_from_mat(phi, thr=1e-6):
+    # thr of 1e-6 corresponds to around 0.01 THz and 0.3 cmm1
+
+    om, eigv = np.linalg.eigh(phi)
+    mask = np.where(om<0)
+    om = np.abs(om)
+    om = np.sqrt(om)
+    om[mask] *= -1
+
+    nmod = len(om)
+    nom = copy.deepcopy(om)
+    neigv = copy.deepcopy(eigv)
+    mask = np.where(np.abs(nom)>thr)
+    nacoustic = nmod-len(mask[0])
+    if nacoustic!=3:
+        print("WARNING, n acoustic modes = ", nacoustic)
     nom = nom[mask]
     neigv = neigv[:,mask]
     neigv = neigv[:,0,:]
@@ -88,18 +117,22 @@ def inv_Phi(fom, feigv):
     om, eigv = remove_translations(fom, feigv)
     return np.einsum('k, ik, jk ->ij', 1/om**2, eigv, eigv)
     
-def force(R,A,phi,psi):
+def force(R,A,phi,chi,psi):
     f1 = np.einsum('ij,j->i', phi, R)  
     f3 = 1/6*np.einsum('ijkl,j,k,l->i', psi, R, R, R)
-    fq = 1/2*np.einsum('ijkl,j,kl->i', psi, R, A)
+    fq3 = 1/2*np.einsum('ijkl,j,kl->i', psi, R, A)
 
-    return -f1-f3-fq
+    f2 = 1/2*np.einsum('ijk,j,k->i', chi, R, R)
+    fq2 = 1/2*np.einsum('ijk,jk->i', chi, A)
 
-def f_classic(R,phi,psi):
+    return -f1-f3-fq3-f2-fq2
+
+def f_classic(R,phi,chi,psi):
     f1 = np.einsum('ij,j->i', phi, R)  
     f3 = 1/6*np.einsum('ijkl,j,k,l->i', psi, R, R, R)
+    f2 = 1/2*np.einsum('ijk,j,k->i', chi, R, R)
 
-    return -f1-f3
+    return -f1-f3-f2
 
 def ext_for(t, field, masses):
 
@@ -138,30 +171,36 @@ def ext_for(t, field, masses):
     else:
         sys.exit("Field not implemented")
 
-def kappa(R, A, phi, psi):
+def kappa(R, A, phi, chi, psi):
     k1 = 1/2*np.einsum('ijkl, k,l->ij', psi, R, R)
     k2 = 1/2*np.einsum('ijkl, kl->ij', psi, A)
-    
-    return phi + k1 +   k2
+
+    k3 = np.einsum('ijk,k->ij', chi, R)
+ 
+    return phi + k1 +   k2 
 
 def d2V(R, phi, psi):
     k1 = 1/2*np.einsum('ijkl, k,l->ij', psi, R, R)
-    return phi+k1
+    k2 = np.einsum('ijk,k->ij', chi, R)
+    return phi+k1+k2
 
-def av_V(R, A, phi, psi):
+def av_V(R, A, phi, chi, psi):
   
     V0 = 1/2*np.einsum('i,j,ij', R, R, phi)
     V1 = 1/2*np.einsum('ij,ij', A, phi)
-    V2 = 1/24*np.einsum('ijkl,i,j,k,l', psi, R ,R ,R ,R)
+    V2 = 1/24*np.einsum('ijkl,i,j,k,l', psi, R ,R ,R ,R, optimize=True)
     V3 = 1/4*np.einsum('ijkl,i,j,kl', psi, R ,R ,A)
     V4 = 1/8*np.einsum('ijkl,ij,kl', psi, A ,A)
-    
+ 
     lamb, vect = np.linalg.eigh(A)
     #Q = np.einsum('s, is,js,ks,ls -> ijkl', lamb**2, vect, vect, vect, vect)
     #V5 = 1/8*np.einsum('ijkl,ijkl', psi, Q)
-    V5 = 1/8*np.einsum('ijkl,im,jm,km,lm,m', psi, vect, vect, vect, vect, lamb**2, optimize= 'optimal')
+    #V5 = 1/8*np.einsum('ijkl,im,jm,km,lm,m', psi, vect, vect, vect, vect, lamb**2, optimize= 'optimal')
 
-    return V0 + V1 + V2 + V3 + V4 
+    V6 = 1/6*np.einsum('ijk,i,j,k', chi, R, R, R)
+    V7 = 1/2*np.einsum('ijk,i,jk', chi, R, A)
+
+    return V0 + V1 + V2 + V3 + V4 + V6 + V7
 
  
 def get_y0(R,P,A,B,C):
@@ -181,7 +220,7 @@ def get_y0(R,P,A,B,C):
     
     return(y0)
 
-def func(t,y, phi, psi, field, gamma, masses):
+def func(t,y, phi, chi, psi, field, gamma, masses):
 
     print("time ", t*4.8377687*1e-2)
     nmod = int((-2 + np.sqrt(4+12*len(y)))/6)
@@ -197,19 +236,20 @@ def func(t,y, phi, psi, field, gamma, masses):
     B = np.reshape(B_lin, (nmod, nmod))
     C = np.reshape(C_lin, (nmod, nmod))
 
-    f = force(R,A,phi,psi)
+    f = force(R,A,phi,chi,psi)
     #f = f_classic(R,phi,psi)
-    curv = kappa(R,A,phi,psi)
+    curv = kappa(R,A,phi,chi,psi)
 
     ydot = np.zeros(len(y))
 
     ydot[:nmod] = P
-    ydot[nmod:2*nmod] = f + ext_for(t, field, masses)
+    ydot[nmod:2*nmod] = f + ext_for(t, field, masses)# -0.001*P #
 
     Adot = C + np.transpose(C)
-    Bdot = -np.dot(curv, C)
+
+    Bdot = -np.dot(curv, C) 
     Bdot = Bdot + np.transpose(Bdot)
-    Cdot = B - np.dot(A,curv)
+    Cdot = B - np.dot(A,curv) # -0.001*C
     
     ydot[2*nmod:2*nmod+nmod**2] = np.reshape(Adot, nmod**2)
     ydot[2*nmod+nmod**2:2*nmod+2*nmod**2] = np.reshape(Bdot, nmod**2)
@@ -217,7 +257,7 @@ def func(t,y, phi, psi, field, gamma, masses):
 
     return ydot
 
-def td_evolution(R, P, A, B, C,  field, gamma, phi, psi, masses, Time, NS, y0=None, init_t=0, chunks=1, label="solution"):
+def td_evolution(R, P, A, B, C,  field, gamma, phi, chi, psi, masses, Time, NS, y0=None, init_t=0, chunks=1, label="solution"):
     # om_L in THz, Time in fs
 
     init_t = init_t/(4.8377687*1e-2)
@@ -231,10 +271,10 @@ def td_evolution(R, P, A, B, C,  field, gamma, phi, psi, masses, Time, NS, y0=No
     for i in range(chunks):
         print("Chunk", i)
  
-        #t = np.linspace(init_t,init_t+Time,NS)
         #sol = odeint(func, y0, tfirst=True,  t, args=(phi, psi, field, gamma, masses))
+        t_eval = np.linspace(init_t,init_t+Time,NS)
         tspan = [init_t,init_t+Time]
-        sol = solve_ivp(func, tspan, y0, args=(phi, psi, field, gamma, masses))
+        sol = solve_ivp(func, tspan, y0, t_eval=t_eval, args=(phi, chi,  psi, field, gamma, masses))
         save(label+'_%d' %i, sol.t, sol.y)
 
         y0 = sol.y[:,-1]
@@ -245,12 +285,16 @@ def td_evolution(R, P, A, B, C,  field, gamma, phi, psi, masses, Time, NS, y0=No
 def save(label, t, sol):
     sol = np.transpose(sol)
     sh = np.shape(sol)
+    print(sh)
     sh = [sh[0],sh[1]+1]
     y = np.zeros(sh)
     y[:,0] = t
     y[:,1:] = sol
     np.save(label,y)
 
+def displace_along_mode(mod, eigv, eta):
+    eta = eta * 1.889725988*np.sqrt(911.444175)
+    return eigv[:,mod]*eta
 
 
 def get_x0(R,Phi):
