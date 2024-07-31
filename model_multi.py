@@ -127,6 +127,22 @@ def force(R,A,phi,chi,psi):
 
     return -f1-f3-fq3-f2-fq2
 
+def force_t(R,A,phi,chi,psi):
+    # now R and A are function of time, first index
+    print("f1")
+    f1 = np.einsum('ij,tj->ti', phi, R)  
+    print("f3")
+    f3 = 1/6*np.einsum('ijkl,tj,tk,tl->ti', psi, R, R, R, optimize = "optimal")
+    print("fq")
+    fq3 = 1/2*np.einsum('ijkl,tj,tkl->ti', psi, R, A, optimize = "optimal")
+
+    print("f2")
+    f2 = 1/2*np.einsum('ijk,tj,tk->ti', chi, R, R, optimize = "optimal")
+    print("fq2")
+    fq2 = 1/2*np.einsum('ijk,tjk->ti', chi, A)
+
+    return -f1-f3-fq3-f2-fq2
+
 def f_classic(R,phi,chi,psi):
     f1 = np.einsum('ij,j->i', phi, R)  
     f3 = 1/6*np.einsum('ijkl,j,k,l->i', psi, R, R, R)
@@ -172,6 +188,10 @@ def ext_for(t, field, masses):
         t0 = t0/(4.8377687*1e-2)
         sig = sig/(4.8377687*1e-2)
         return -force * np.cos(2*np.pi*freq*(t-t0)) * np.exp(-0.5*(t-t0)**2/sig**2)
+    elif case=='gaussian2':
+        t0 = t0/(4.8377687*1e-2)
+        sig = 1/(np.sqrt(2)*np.pi*freq)
+        return -force * (1 - (t-t0)**2/sig**2) * np.exp(-0.5*(t-t0)**2/sig**2)
     else:
         sys.exit("Field not implemented")
 
@@ -294,7 +314,8 @@ def save(label, t, sol):
     y = np.zeros(sh)
     y[:,0] = t
     y[:,1:] = sol
-    np.save(label,y)
+    #np.save(label,y)
+    np.savez_compressed(label,y)
 
 def displace_along_mode(mod, eigv, eta):
     eta = eta * 1.889725988*np.sqrt(911.444175)
