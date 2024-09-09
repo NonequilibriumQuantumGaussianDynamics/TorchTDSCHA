@@ -194,6 +194,7 @@ def load_from_sscha(dyn_file, path, T, read_corrected = False, path_corrected = 
     nat = len(positions)
     nmod = 3*nat
     R = np.reshape(positions-atoms.positions, nmod) * A_to_B
+    R = np.einsum('i,i->i', R, np.sqrt(masses))
 
     if not read_corrected:
         phi = read_phi(path)
