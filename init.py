@@ -230,8 +230,76 @@ def load_from_sscha(dyn_file, path, T, read_corrected = False, path_corrected = 
 
     return nat, nmod, phi, chi, psi, R, P,  masses, A, B, C
 
+def reduce_model(modes, nat, nmod, phi, chi, psi, R, P,  masses, A, B, C, eigv):
+    
+    phi_mu = np.einsum('ij,im,jn->mn', phi, eigv, eigv)
+    chi_mu = np.einsum('ijk,im,jn,kp->mnp', chi, eigv, eigv, eigv)
+    psi_mu = np.einsum('ijkl,im,jn,kp,lq->mnpq', psi, eigv, eigv, eigv, eigv, optimize = "optimal")
 
-def read_charges(path):
+    phi_mu = phi_mu[np.ix_(modes, modes)]
+    chi_mu = chi_mu[np.ix_(modes, modes, modes)]
+    psi_mu = psi_mu[np.ix_(modes, modes, modes, modes)]
+
+    R_mu = np.einsum('i,is->s', R, eigv)
+    P_mu = np.einsum('i,is->s', P, eigv)
+    A_mu = np.einsum('ij,is,jt->st', A, eigv, eigv)
+    B_mu = np.einsum('ij,is,jt->st', B, eigv, eigv)
+    C_mu = np.einsum('ij,is,jt->st', C, eigv, eigv)
+
+    R_mu = R_mu[np.ix_(modes)]
+    P_mu = P_mu[np.ix_(modes)]
+    A_mu = A_mu[np.ix_(modes, modes)]
+    B_mu = B_mu[np.ix_(modes, modes)]
+    C_mu = C_mu[np.ix_(modes, modes)]
+
+    nmod = len(modes)
+
+
+def continue_evolution(fil):
+    sol = np.load(fil)['arr_0']
+    tfin = sol[-1,0]*(4.8377687*1e-2)
+
+    sol =  sol[:,1:]
+ 
+    N, n1 = np.shape(sol)
+    nmod = int((-2+np.sqrt(4+12*n1))/6)
+
+    R = sol[-1,:nmod]
+    P = sol[-1,nmod:2*nmod]
+    A = sol[-1,2*nmod:2*nmod+nmod**2]
+    A = np.reshape(A,(nmod,nmod))
+    B = sol[-1,2*nmod+nmod**2:2*nmod+2*nmod**2]
+    B = np.reshape(B,(nmod,nmod))
+    C = sol[-1,2*nmod+2*nmod**2:2*nmod+3*nmod**2]
+    C = np.reshape(C,(nmod,nmod))
+
+    newlabel = fil[:-5]+'cont'
+    return R, P, A, B, C, newlabel, tfin
+
+def merge_evolutions(fil,fil1,fil2=''):
+    sol = np.load(fil)['arr_0']
+    sol1 = np.load(fil1)['arr_0']
+    N1, x = np.shape(sol)
+    N2, x = np.shape(sol1)
+    merged = np.zeros((N1+N2-1,x))
+
+    if fil2!='':
+        sol2 = np.load(fil2)['arr_0']
+        N3, x = np.shape(sol2)
+        merged = np.zeros((N1+N2+N3-2,x))
+
+    merged[:N1,:] = sol
+
+    if fil2!='':
+        merged[N1:N1+N2-1,:] = sol1[1:,:]
+        merged[N1+N2-1:,:] = sol2[1:,:]
+    else:
+        merged[N1:,:] = sol1[1:,:]
+
+    return merged
+
+
+def read_charges(path, masses):
 
     ff = open(path)
     lines = ff.readlines()
@@ -255,6 +323,11 @@ def read_charges(path):
                 print("check ", i+1, np.sum(Zeff[:,i]))
         if 'Dielectric constant in cartesian axis' in lines[i]:
             eps = float(lines[i+2].split()[1])
+
+    NewZeff = np.zeros((3*nat, 3))
+    for i in range(nat):
+        NewZeff[3*i:3*i+3] = Zeff[i,:,:]
+    Zeff = np.einsum('ij,i->ij', NewZeff, 1/np.sqrt(masses))
     return Zeff, eps
 
 

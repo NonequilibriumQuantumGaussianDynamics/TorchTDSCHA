@@ -51,7 +51,6 @@ def print_phonons(om):
 
 def print_phonons_mat(phi):
     om, eigv = np.linalg.eigh(phi)
-    print(om )
     mask = np.where(om<0)
     om = np.abs(om)
     om = np.sqrt(om)
@@ -113,6 +112,21 @@ def get_AB(fom, feigv, T):
     B= np.einsum('s,is,js->ij', lambd, eigv, eigv)
     return A,B
 
+def get_alpha(om, eigv, T):
+    K_to_Ry=6.336857346553283e-06
+ 
+    if T<0.001:
+        tanh = np.ones(len(om))
+    else:
+        arg = om/(T*K_to_Ry)/2.0
+        tanh = np.tanh(arg)
+
+    lambd = tanh*(2*om)
+    alpha = np.einsum('s,is,js->ij', lambd, eigv, eigv)
+
+    return alpha
+
+
 def inv_Phi(fom, feigv):
     om, eigv = remove_translations(fom, feigv)
     return np.einsum('k, ik, jk ->ij', 1/om**2, eigv, eigv)
@@ -150,7 +164,7 @@ def f_classic(R,phi,chi,psi):
 
     return -f1-f3-f2
 
-def ext_for(t, field, masses):
+def ext_for(t, field):
 
     Eamp = field['amp']
     om_L = field['freq']
@@ -167,15 +181,15 @@ def ext_for(t, field, masses):
     Eeff = Eamp * 2.7502067*1e-7  * 2 /(1+np.sqrt(eps))
     freq = om_L/(2.0670687*1e4)
 
-    nat = len(Zeff)
-    nmod = 3*nat
+    nmod = len(Zeff)
+    nat = int(nmod/3)
 
     force = []
     for i in range(nat):
-        force.append(np.dot(Zeff[i], edir)*Eeff*np.sqrt(2))
+        force.append(np.dot(Zeff[3*i:3*i+3,:], edir)*Eeff*np.sqrt(2))
     force = np.array(force)
     force = np.reshape(force, nmod)
-    force = force / np.sqrt(masses)
+    #force = force / np.sqrt(masses)  EFFECTIVE CHARGES ARE ALREADY RESCALED FOR MASSES
 
 
     if case=='sine':
@@ -200,10 +214,12 @@ def kappa(R, A, phi, chi, psi):
     k2 = 1/2*np.einsum('ijkl, kl->ij', psi, A)
 
     k3 = np.einsum('ijk,k->ij', chi, R)
+    #print_phonons_mat(phi + k1 + k2 + 0*k3)
+    #sys.exit()
  
-    return phi + k1 +   k2 
+    return phi + k1 + k2 + k3
 
-def d2V(R, phi, psi):
+def d2V(R, phi, chi,  psi):
     k1 = 1/2*np.einsum('ijkl, k,l->ij', psi, R, R)
     k2 = np.einsum('ijk,k->ij', chi, R)
     return phi+k1+k2
@@ -244,7 +260,7 @@ def get_y0(R,P,A,B,C):
     
     return(y0)
 
-def func(t,y, phi, chi, psi, field, gamma, masses):
+def func(t,y, phi, chi, psi, field, gamma):
 
     print("time ", t*4.8377687*1e-2)
     nmod = int((-2 + np.sqrt(4+12*len(y)))/6)
@@ -267,7 +283,7 @@ def func(t,y, phi, chi, psi, field, gamma, masses):
     ydot = np.zeros(len(y))
 
     ydot[:nmod] = P
-    ydot[nmod:2*nmod] = f + ext_for(t, field, masses)# -0.001*P #
+    ydot[nmod:2*nmod] = f + ext_for(t, field)# -0.001*P #
 
     Adot = C + np.transpose(C)
 
@@ -281,7 +297,7 @@ def func(t,y, phi, chi, psi, field, gamma, masses):
 
     return ydot
 
-def td_evolution(R, P, A, B, C,  field, gamma, phi, chi, psi, masses, Time, NS, y0=None, init_t=0, chunks=1, label="solution"):
+def td_evolution(R, P, A, B, C,  field, gamma, phi, chi, psi, Time, NS, y0=None, init_t=0, chunks=1, label="solution"):
     # om_L in THz, Time in fs
 
     init_t = init_t/(4.8377687*1e-2)
@@ -298,7 +314,7 @@ def td_evolution(R, P, A, B, C,  field, gamma, phi, chi, psi, masses, Time, NS, 
         #sol = odeint(func, y0, tfirst=True,  t, args=(phi, psi, field, gamma, masses))
         t_eval = np.linspace(init_t,init_t+Time,NS)
         tspan = [init_t,init_t+Time]
-        sol = solve_ivp(func, tspan, y0, t_eval=t_eval, args=(phi, chi,  psi, field, gamma, masses))
+        sol = solve_ivp(func, tspan, y0, t_eval=t_eval, args=(phi, chi,  psi, field, gamma))
         save(label+'_%d' %i, sol.t, sol.y)
 
         y0 = sol.y[:,-1]
@@ -390,7 +406,6 @@ def get_R_sqPhi(x):
             count += 1
     return R,sqPhi
 
-    Tmatrix = np.einsum()
     
 
 def nb(om,T, thr=1e-6):
@@ -450,7 +465,7 @@ def dAdPhi(x, *args):
 
 def grad(x, *args):
     
-    T, phi, psi  = args
+    T, phi, chi, psi  = args
 
     R, sqPhi = get_R_sqPhi(x)
     om, eigv = np.linalg.eigh(sqPhi)
@@ -458,27 +473,27 @@ def grad(x, *args):
     A, B = get_AB(om, eigv, T)
     Phi = np.dot(sqPhi,sqPhi)
 
+    """
     t0 = 1/2*np.einsum('ijkl,k,l->ij', psi ,R ,R)
     t1 = 1/2*np.einsum('ijkl,kl->ij', psi ,A)
-    
+    t2 = np.einsum('ijk,k->ij', chi,R)
     lamb, vect = np.linalg.eigh(A)
-    #Ttens = np.einsum('s, is,js,ks,ls -> ijkl', lamb, vect, vect, vect, vect)
-    #t2 = 1/2*np.einsum('bjkl,ajkl->ab', psi, Ttens)
-    psi_bmu = np.einsum('bijk,im,jm,km->bm', psi, vect, vect, vect, optimize="optimal")
-    t2 = np.einsum('bm,am,m->ab', psi_bmu, vect, lamb, optimize="optimal")
-    
-    
     gradPhi =  -phi-t0-t1-t2+Phi
+    """
+
+    gradPhi = kappa(R, A, phi, chi, psi) - Phi
     gradPhi = np.dot(sqPhi,gradPhi) + np.dot(gradPhi,sqPhi)
 
-    forc = force(R,A,phi,psi)
+    forc = force(R,A,phi,chi,psi)
+
     Phi_inv = inv_Phi(om, eigv)
     gradR = np.dot(Phi_inv, forc)
 
     gradx = get_gradx0(gradR, gradPhi)
-    print("Gradient", np.linalg.norm(gradx))
-    print("Condition", np.linalg.norm(Phi-kappa(R,A,phi, psi)))
-    print("Condition", np.linalg.norm(B-np.dot(A,kappa(R,A,phi, psi))))
+    #print(gradx)
+    #print("Gradient", np.linalg.norm(gradx))
+    #print("Condition", np.linalg.norm(Phi-kappa(R,A,phi, chi, psi)))
+    #print("Condition", np.linalg.norm(B-np.dot(A,kappa(R,A,phi,chi,psi))))
 
     return gradx
     
@@ -494,7 +509,7 @@ def F(x,*args):
 
     #print_phonons(om)
 
-    T, phi, psi  = args
+    T, phi, chi, psi  = args
 
 
     K_to_Ry=6.336857346553283e-06
@@ -503,24 +518,25 @@ def F(x,*args):
 
     A, B = get_AB(om, eigv, T)
 
-    avg_V = av_V(R,A,phi,psi)
+    avg_V = av_V(R,A,phi,chi,psi)
     V_harm = 1/2*np.einsum('ij,ij', A, Phi)
     avg_V -= V_harm
     
-    print("Iter ", F_harm + avg_V)
+    print_phonons_mat(Phi)
+    #print("Iter ", F_harm + avg_V)
 
     return F_harm + avg_V
 
-def minimize_free_energy(T,phi,psi, R0):
+def minimize_free_energy(T,phi,chi,psi, R0):
 
     nmod = len(R0)
 
-    Phi0 = d2V(R0,phi,psi)
+    Phi0 = d2V(R0,phi,chi,psi)
     om, eigv = get_phonons_r(Phi0) # Absolute value at first trial!
     print_phonons_mat(Phi0)
 
     A, B = get_AB(om, eigv, T)
-    Phi0 = kappa(R0,A,phi,psi)
+    Phi0 = kappa(R0,A,phi,chi,psi)
     om, eigv = get_phonons_r(Phi0) # Same here
     Phi0 = np.einsum('k,ik,jk->ij', om**2, eigv, eigv) # Now regularize Phi0 
 
@@ -531,10 +547,10 @@ def minimize_free_energy(T,phi,psi, R0):
 
     x0 = get_x0(R0,Phi0)
     print("Initial gradient") 
-    print(grad(x0, T, phi, psi))
+    print(grad(x0, T, phi, chi, psi))
 
-    #res = minimize(F, x0, args = (T,phi,psi))
-    res = minimize(F, x0, args = (T,phi,psi), method = 'CG', jac = grad) #options={'gtol':1e-30})
+    #res = minimize(F, x0, args = (T,phi,chi,psi))
+    res = minimize(F, x0, args = (T,phi,chi,psi), method = 'CG', jac = grad, options={'gtol':1e-8})
     #res = minimize(F, x0, args = (T,phi,psi), method = 'CG') #options={'gtol':1e-30})
     R, Phi = get_R_Phi(res['x'])
     om, eigv = get_phonons(Phi)
@@ -545,11 +561,11 @@ def minimize_free_energy(T,phi,psi, R0):
 
     #print('R', R,'om',  om, 'Ry',  om*13.605*8065.5401, ' cmm1', om*13.605*241.798, 'THz')
     print(res)
-    print(F(res['x'], T,phi,psi))
+    print(F(res['x'], T,phi,chi,psi))
     A, B = get_AB(om, eigv, T)
      
-    kap = kappa(R,A, phi,psi )
-    forc = force(R,A, phi,psi)
+    kap = kappa(R,A, phi,chi,psi )
+    forc = force(R,A, phi,chi,psi)
     print('check f', np.linalg.norm(forc))
     print('check A', np.linalg.norm(B-np.dot( A, kap)))
     return R, om, A, B
