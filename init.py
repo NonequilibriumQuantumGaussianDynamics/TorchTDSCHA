@@ -230,10 +230,16 @@ def load_from_sscha(dyn_file, path, T, read_corrected = False, path_corrected = 
 
     return nat, nmod, phi, chi, psi, R, P,  masses, A, B, C
 
-def reduce_model(modes, nat, nmod, phi, chi, psi, R, P,  masses, A, B, C, eigv):
+def reduce_model(modes, nmod, phi, chi, psi, R, P, A, B, C, eigv, Zeff):
+
+    print("Reducing model to ", modes)
+    modes = [m-1 for m in modes]
     
+    print("1")
     phi_mu = np.einsum('ij,im,jn->mn', phi, eigv, eigv)
-    chi_mu = np.einsum('ijk,im,jn,kp->mnp', chi, eigv, eigv, eigv)
+    print("2")
+    chi_mu = np.einsum('ijk,im,jn,kp->mnp', chi, eigv, eigv, eigv, optimize = "optimal")
+    print("3")
     psi_mu = np.einsum('ijkl,im,jn,kp,lq->mnpq', psi, eigv, eigv, eigv, eigv, optimize = "optimal")
 
     phi_mu = phi_mu[np.ix_(modes, modes)]
@@ -252,7 +258,13 @@ def reduce_model(modes, nat, nmod, phi, chi, psi, R, P,  masses, A, B, C, eigv):
     B_mu = B_mu[np.ix_(modes, modes)]
     C_mu = C_mu[np.ix_(modes, modes)]
 
+    Zeff_mu = np.einsum('is, ij->sj', eigv, Zeff)
+    Zeff_mu = Zeff_mu[modes,:]
+
     nmod = len(modes)
+    print("done")
+
+    return nmod, phi_mu, chi_mu, psi_mu, R_mu, P_mu, A_mu, B_mu, C_mu, Zeff_mu 
 
 
 def continue_evolution(fil):
@@ -327,8 +339,8 @@ def read_charges(path, masses):
     NewZeff = np.zeros((3*nat, 3))
     for i in range(nat):
         NewZeff[3*i:3*i+3] = Zeff[i,:,:]
-    Zeff = np.einsum('ij,i->ij', NewZeff, 1/np.sqrt(masses))
-    return Zeff, eps
+    NewZeff = np.einsum('ij,i->ij', NewZeff, 1/np.sqrt(masses))
+    return NewZeff, eps
 
 
 def read_solution(label, chunks):

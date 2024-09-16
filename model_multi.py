@@ -242,6 +242,22 @@ def av_V(R, A, phi, chi, psi):
 
     return V0 + V1 + V2 + V3 + V4 + V6 + V7
 
+def av_V_t(R, A, phi, chi, psi):
+  
+    V0 = 1/2*np.einsum('ti,tj,ij->t', R, R, phi, optimize = 'optimal')
+    V1 = 1/2*np.einsum('tij,ij->t', A, phi, optimize = 'optimal')
+    V2 = 1/24*np.einsum('ijkl,ti,tj,tk,tl->t', psi, R ,R ,R ,R, optimize='optimal')
+    V3 = 1/4*np.einsum('ijkl,ti,tj,tkl->t', psi, R ,R ,A, optimize = 'optimal')
+    V4 = 1/8*np.einsum('ijkl,tij,tkl->t', psi, A ,A , optimize = 'optimal')
+ 
+    #Q = np.einsum('s, is,js,ks,ls -> ijkl', lamb**2, vect, vect, vect, vect)
+    #V5 = 1/8*np.einsum('ijkl,ijkl', psi, Q)
+    #V5 = 1/8*np.einsum('ijkl,im,jm,km,lm,m', psi, vect, vect, vect, vect, lamb**2, optimize= 'optimal')
+
+    V6 = 1/6*np.einsum('ijk,ti,tj,tk->t', chi, R, R, R, optimize = 'optimal')
+    V7 = 1/2*np.einsum('ijk,ti,tjk->t', chi, R, A, optimize = 'optimal')
+
+    return V0 + V1 + V2 + V3 + V4 + V6 + V7
  
 def get_y0(R,P,A,B,C):
     
