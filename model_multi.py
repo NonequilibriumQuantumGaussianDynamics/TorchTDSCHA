@@ -489,24 +489,19 @@ def grad(x, *args):
     A, B = get_AB(om, eigv, T)
     Phi = np.dot(sqPhi,sqPhi)
 
-    """
-    t0 = 1/2*np.einsum('ijkl,k,l->ij', psi ,R ,R)
-    t1 = 1/2*np.einsum('ijkl,kl->ij', psi ,A)
-    t2 = np.einsum('ijk,k->ij', chi,R)
-    lamb, vect = np.linalg.eigh(A)
-    gradPhi =  -phi-t0-t1-t2+Phi
-    """
-
     gradPhi = kappa(R, A, phi, chi, psi) - Phi
     gradPhi = np.dot(sqPhi,gradPhi) + np.dot(gradPhi,sqPhi)
 
     forc = force(R,A,phi,chi,psi)
 
     Phi_inv = inv_Phi(om, eigv)
-    gradR = np.dot(Phi_inv, forc)
+    gradR = np.dot(Phi_inv, forc) 
 
     gradx = get_gradx0(gradR, gradPhi)
-    #print(gradx)
+    print("Position gradient (A\sqrt{u})")
+    print(gradR/1.89/np.sqrt(911))
+    print("FC gradient (meV/A^2u)")
+    print(gradPhi*1.89**2*911*13605)
     #print("Gradient", np.linalg.norm(gradx))
     #print("Condition", np.linalg.norm(Phi-kappa(R,A,phi, chi, psi)))
     #print("Condition", np.linalg.norm(B-np.dot(A,kappa(R,A,phi,chi,psi))))
@@ -537,11 +532,10 @@ def F(x,*args):
     avg_V = av_V(R,A,phi,chi,psi)
     V_harm = 1/2*np.einsum('ij,ij', A, Phi)
     avg_V -= V_harm
-    
-    print_phonons_mat(Phi)
-    #print("Iter ", F_harm + avg_V)
+     
+    print("Iter ", F_harm *13605, avg_V *13605, (F_harm+avg_V)*13605 )
 
-    return F_harm + avg_V
+    return (F_harm + avg_V)
 
 def minimize_free_energy(T,phi,chi,psi, R0):
 
@@ -549,6 +543,7 @@ def minimize_free_energy(T,phi,chi,psi, R0):
 
     Phi0 = d2V(R0,phi,chi,psi)
     om, eigv = get_phonons_r(Phi0) # Absolute value at first trial!
+    print("Initial phonons")
     print_phonons_mat(Phi0)
 
     A, B = get_AB(om, eigv, T)
@@ -556,9 +551,7 @@ def minimize_free_energy(T,phi,chi,psi, R0):
     om, eigv = get_phonons_r(Phi0) # Same here
     Phi0 = np.einsum('k,ik,jk->ij', om**2, eigv, eigv) # Now regularize Phi0 
 
-    #print('R', R0,'om',  om, 'Ry',  om*13.605*8065.5401, ' cmm1', om*13.605*241.798, 'THz')
-    print("Initial phonons")
-    #print_phonons(om)
+    print("Curvature phonons")
     print_phonons_mat(Phi0)
 
     x0 = get_x0(R0,Phi0)
@@ -566,7 +559,8 @@ def minimize_free_energy(T,phi,chi,psi, R0):
     print(grad(x0, T, phi, chi, psi))
 
     #res = minimize(F, x0, args = (T,phi,chi,psi))
-    res = minimize(F, x0, args = (T,phi,chi,psi), method = 'CG', jac = grad, options={'gtol':1e-8})
+    res = minimize(F, x0, args = (T,phi,chi,psi), jac = grad, method = 'BFGS', options={'gtol':1e-8})
+    #res = minimize(F, x0, args = (T,phi,chi,psi), method = 'CG', jac = grad, options={'gtol':1e-8})
     #res = minimize(F, x0, args = (T,phi,psi), method = 'CG') #options={'gtol':1e-30})
     R, Phi = get_R_Phi(res['x'])
     om, eigv = get_phonons(Phi)
@@ -577,7 +571,10 @@ def minimize_free_energy(T,phi,chi,psi, R0):
 
     #print('R', R,'om',  om, 'Ry',  om*13.605*8065.5401, ' cmm1', om*13.605*241.798, 'THz')
     print(res)
-    print(F(res['x'], T,phi,chi,psi))
+    print("Free energy")
+    print(F(res['x'], T,phi,chi,psi)*13605)
+    print("Final grad")
+    print(grad(res['x'], T, phi, chi, psi))
     A, B = get_AB(om, eigv, T)
      
     kap = kappa(R,A, phi,chi,psi )
