@@ -31,6 +31,8 @@ def project_threefold_modes(u1,u2,u3, minim_thr = 1e-10, rounded = True):
 
     popt = minimize(obj, [0,0,0], tol=minim_thr)
     print(popt)
+    if popt.success == False:
+        sys.exit("Projection failed")
     r, s, t = popt['x']
     M = np.dot(Rx(r),np.dot(Rz(s),Rx(t)))
 

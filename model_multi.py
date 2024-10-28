@@ -157,6 +157,18 @@ def force_t(R,A,phi,chi,psi):
 
     return -f1-f3-fq3-f2-fq2
 
+def av_d3(R, chi, psi):
+    d3 = np.einsum('ijkl,l->ijk', psi, R)
+    d3 = d3*0 + chi
+    return d3
+
+def V_classic(R, phi, chi, psi):
+    V2 = 1/2*np.einsum('ij,i,j', phi, R, R)
+    V3 = 1/6*np.einsum('ijk,i,j,k', chi, R, R, R, optimize = "optimal")
+    V4 = 1/24*np.einsum('ijkl,i,j,k,l', psi, R, R, R, R, optimize = "optimal")
+
+    return V2 + V3 + V4
+
 def f_classic(R,phi,chi,psi):
     f1 = np.einsum('ij,j->i', phi, R)  
     f3 = 1/6*np.einsum('ijkl,j,k,l->i', psi, R, R, R)
@@ -219,6 +231,14 @@ def kappa(R, A, phi, chi, psi):
  
     return phi + k1 + k2 + k3
 
+def kappa_t(R, A, phi, chi, psi):
+    k1 = 1/2*np.einsum('ijkl, tk,tl->tij', psi, R, R, optimize = 'optimal')
+    k2 = 1/2*np.einsum('ijkl, tkl->tij', psi, A, optimize = 'optimal')
+
+    k3 = np.einsum('ijk,tk->tij', chi, R, optimize = 'optimal')
+ 
+    return phi + k1 + k2 + k3
+
 def d2V(R, phi, chi,  psi):
     k1 = 1/2*np.einsum('ijkl, k,l->ij', psi, R, R)
     k2 = np.einsum('ijk,k->ij', chi, R)
@@ -228,17 +248,16 @@ def av_V(R, A, phi, chi, psi):
   
     V0 = 1/2*np.einsum('i,j,ij', R, R, phi)
     V1 = 1/2*np.einsum('ij,ij', A, phi)
-    V2 = 1/24*np.einsum('ijkl,i,j,k,l', psi, R ,R ,R ,R, optimize=True)
-    V3 = 1/4*np.einsum('ijkl,i,j,kl', psi, R ,R ,A)
-    V4 = 1/8*np.einsum('ijkl,ij,kl', psi, A ,A)
+    V2 = 1/24*np.einsum('ijkl,i,j,k,l', psi, R ,R ,R ,R, optimize="optimal")
+    V3 = 1/4*np.einsum('ijkl,i,j,kl', psi, R ,R ,A, optimize="optimal")
+    V4 = 1/8*np.einsum('ijkl,ij,kl', psi, A ,A, optimize="optimal")
  
-    lamb, vect = np.linalg.eigh(A)
     #Q = np.einsum('s, is,js,ks,ls -> ijkl', lamb**2, vect, vect, vect, vect)
     #V5 = 1/8*np.einsum('ijkl,ijkl', psi, Q)
     #V5 = 1/8*np.einsum('ijkl,im,jm,km,lm,m', psi, vect, vect, vect, vect, lamb**2, optimize= 'optimal')
 
-    V6 = 1/6*np.einsum('ijk,i,j,k', chi, R, R, R)
-    V7 = 1/2*np.einsum('ijk,i,jk', chi, R, A)
+    V6 = 1/6*np.einsum('ijk,i,j,k', chi, R, R, R, optimize="optimal")
+    V7 = 1/2*np.einsum('ijk,i,jk', chi, R, A, optimize="optimal")
 
     return V0 + V1 + V2 + V3 + V4 + V6 + V7
 

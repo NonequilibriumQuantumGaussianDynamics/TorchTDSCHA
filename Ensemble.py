@@ -46,6 +46,7 @@ from model_multi import get_AB
 from model_multi import force as exact_force
 from model_multi import kappa
 from model_multi import av_V
+from model_multi import av_d3
 
 
 #import sscha_HP_odd
@@ -3793,12 +3794,32 @@ Error while loading the julia module.
         # Lets call the Fortran subroutine to compute the v3
         if verbose:
             print ("Going into d3")
-        if timer:
-            d3 = timer.execute_timed_function(SCHAModules.get_v3, a, new_pol, trans, amass, ityp,
-                                    f, u, self.rho, log_err, override_name="SCHAModules.get_v3")
+        if not self.exact_averages:
+            if timer:
+                d3 = timer.execute_timed_function(SCHAModules.get_v3, a, new_pol, trans, amass, ityp,
+                                        f, u, self.rho, log_err, override_name="SCHAModules.get_v3")
+            else:
+                d3 = SCHAModules.get_v3(a, new_pol, trans, amass, ityp,
+                                        f, u, self.rho, log_err)
         else:
-            d3 = SCHAModules.get_v3(a, new_pol, trans, amass, ityp,
-                                    f, u, self.rho, log_err)
+            chi = self.chi
+            psi = self.psi
+
+            ref_coords = self.reference
+            nat = len(ref_coords)
+            nmod = 3*nat
+            structure = self.current_dyn.structure
+            masses = structure.get_masses_array()
+            masses = np.repeat(masses,3) / 2 # masses are divided time 2
+            coords = structure.coords
+            R = coords - ref_coords * 1.88973 # coords are already in Ry, due to the conversion at the beginning of the routine
+            R = np.reshape(R, nmod)
+            R = np.einsum('i,i->i', R, np.sqrt(masses)) 
+            d3 = av_d3(R, chi, psi)
+            d3 = np.einsum('ijk,i,j,k->ijk', d3, np.sqrt(masses),np.sqrt(masses),np.sqrt(masses), optimize = True)
+            d3 = d3 / 2 #Ha
+            d3 = np.asfortranarray(d3)
+
         if verbose:
             print("Outside d3")
 
