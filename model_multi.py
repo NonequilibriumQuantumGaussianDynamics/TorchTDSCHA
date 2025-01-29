@@ -133,11 +133,11 @@ def inv_Phi(fom, feigv):
     
 def force(R,A,phi,chi,psi):
     f1 = np.einsum('ij,j->i', phi, R)  
-    f3 = 1/6*np.einsum('ijkl,j,k,l->i', psi, R, R, R)
-    fq3 = 1/2*np.einsum('ijkl,j,kl->i', psi, R, A)
+    f3 = 1/6*np.einsum('ijkl,j,k,l->i', psi, R, R, R, optimize = 'optimal')
+    fq3 = 1/2*np.einsum('ijkl,j,kl->i', psi, R, A, optimize = 'optimal')
 
-    f2 = 1/2*np.einsum('ijk,j,k->i', chi, R, R)
-    fq2 = 1/2*np.einsum('ijk,jk->i', chi, A)
+    f2 = 1/2*np.einsum('ijk,j,k->i', chi, R, R, optimize = 'optimal')
+    fq2 = 1/2*np.einsum('ijk,jk->i', chi, A, optimize = 'optimal')
 
     return -f1-f3-fq3-f2-fq2
 
@@ -159,7 +159,7 @@ def force_t(R,A,phi,chi,psi):
 
 def av_d3(R, chi, psi):
     d3 = np.einsum('ijkl,l->ijk', psi, R)
-    d3 = d3*0 + chi
+    d3 = d3 + chi
     return d3
 
 def V_classic(R, phi, chi, psi):
@@ -218,12 +218,14 @@ def ext_for(t, field):
         t0 = t0/(4.8377687*1e-2)
         sig = 1/(np.sqrt(2)*np.pi*freq)
         return -force * (1 - (t-t0)**2/sig**2) * np.exp(-0.5*(t-t0)**2/sig**2)
+    elif case=='sinc':
+        return -force * np.sinc(t*freq*2)
     else:
         sys.exit("Field not implemented")
 
 def kappa(R, A, phi, chi, psi):
-    k1 = 1/2*np.einsum('ijkl, k,l->ij', psi, R, R)
-    k2 = 1/2*np.einsum('ijkl, kl->ij', psi, A)
+    k1 = 1/2*np.einsum('ijkl, k,l->ij', psi, R, R, optimize = 'optimal')
+    k2 = 1/2*np.einsum('ijkl, kl->ij', psi, A, optimize = 'optimal')
 
     k3 = np.einsum('ijk,k->ij', chi, R)
     #print_phonons_mat(phi + k1 + k2 + 0*k3)
@@ -238,6 +240,7 @@ def kappa_t(R, A, phi, chi, psi):
     k3 = np.einsum('ijk,tk->tij', chi, R, optimize = 'optimal')
  
     return phi + k1 + k2 + k3
+
 
 def d2V(R, phi, chi,  psi):
     k1 = 1/2*np.einsum('ijkl, k,l->ij', psi, R, R)
@@ -318,7 +321,7 @@ def func(t,y, phi, chi, psi, field, gamma):
     ydot = np.zeros(len(y))
 
     ydot[:nmod] = P
-    ydot[nmod:2*nmod] = f + ext_for(t, field)# -0.001*P #
+    ydot[nmod:2*nmod] = f + ext_for(t, field) - gamma*P #
 
     Adot = C + np.transpose(C)
 

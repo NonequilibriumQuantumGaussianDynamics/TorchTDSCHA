@@ -266,6 +266,51 @@ def reduce_model(modes, nmod, phi, chi, psi, R, P, A, B, C, eigv, Zeff):
 
     return nmod, phi_mu, chi_mu, psi_mu, R_mu, P_mu, A_mu, B_mu, C_mu, Zeff_mu 
 
+def isolate_couplings(modes, phi, chi, psi, eigv, exclude_diag = []):
+
+    print("Reducing to ", modes)
+    modes = [m-1 for m in modes]
+    
+    phi_mu = np.einsum('ij,im,jn->mn', phi, eigv, eigv)
+    print("1")
+    chi_mu = np.einsum('ijk,im,jn,kp->mnp', chi, eigv, eigv, eigv, optimize = "optimal")
+    print("2")
+    psi_mu = np.einsum('ijkl,im,jn,kp,lq->mnpq', psi, eigv, eigv, eigv, eigv, optimize = "optimal")
+
+    shape = phi_mu.shape
+    mask = np.zeros(shape, dtype=bool)
+    idx = np.ix_(modes, modes)
+    mask[idx] = True
+    phi_mu[~mask] = 0
+
+    shape = chi_mu.shape
+    mask = np.zeros(shape, dtype=bool)
+    idx = np.ix_(modes, modes, modes)
+    mask[idx] = True
+    chi_mu[~mask] = 0
+
+    shape = psi_mu.shape
+    mask = np.zeros(shape, dtype=bool)
+    idx = np.ix_(modes, modes, modes, modes)
+    mask[idx] = True
+    psi_mu[~mask] = 0
+
+    for mod in exclude_diag:
+        s = mod-1
+        print(phi_mu[s,s])
+        phi_mu[s,s] = 0
+        print(chi_mu[s,s,s])
+        chi_mu[s,s,s] = 0
+        print(psi_mu[s,s,s,s])
+        psi_mu[s,s,s,s] = 0
+
+    phi = np.einsum('mn,im,jn->ij', phi_mu, eigv, eigv, optimize = "optimal")
+    chi = np.einsum('mnp,im,jn,kp->ijk', chi_mu, eigv, eigv, eigv, optimize = "optimal")
+    psi = np.einsum('mnpq,im,jn,kp,lq->ijkl', psi_mu, eigv, eigv, eigv, eigv, optimize = "optimal")
+
+    return phi, chi, psi
+
+
 
 def continue_evolution(fil):
     sol = np.load(fil)['arr_0']
