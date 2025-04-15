@@ -1,20 +1,13 @@
 import os
-import ICP
 import ase
 from ase import Atoms
 from ase.build import molecule
-from ICP.Calculator import ICPCalculator
-import ICP.libs
 import numpy as np
-from ase.visualize import view
 import glob
 import sys
-from quippy.potential import Potential
-from ase.calculators.lammpsrun import LAMMPS
 from ase.calculators.lammpslib import LAMMPSlib
 import cellconstructor as CC, cellconstructor.Phonons
 import cellconstructor.Structure, cellconstructor.calculators
-from model_multi import *
 from mpi4py import MPI
 import time
 
@@ -34,19 +27,6 @@ masses = np.repeat(structure.get_masses_array(), 3)
 
 crystal = Atoms(names, positions=ang_pos, pbc=True, cell=np.array(cell))
 
-#calc = ICPCalculator(n1,n2,n3, re_init=True)
-os.environ["ASE_LAMMPSRUN_COMMAND"] = "/home/flibbi/programs/lammps-stable_23Jun2022_update4/build/lmp"
-calc = LAMMPS(
-specorder=["Sr", "Ti", "O"],
-keep_tmp_files=True,
-tmp_dir="tmpflare",
-keep_alive=False,
-parameters={
-  "pair_style": "flare",
-"pair_coeff": [f"* * /scratch/flibbi/sscha/SrTiO3_flare/srtio3_34_160atoms.otf.flare"],
-"atom_style": "atomic"
-}
-)
 
 calc = LAMMPSlib(
         keep_alive=True,
@@ -54,7 +34,7 @@ calc = LAMMPSlib(
         atom_types={"Sr" : 1, "Ti" : 2, "O" : 3},
         lmpcmds=[
             "pair_style flare",
-            "pair_coeff * * /scratch/flibbi/sscha/SrTiO3_flare/srtio3.otf.flare"
+            "pair_coeff * * /n/netscratch/kozinsky_lab/Lab/libbi/calc_deriv/flare_potential/srtio3.otf.flare"
             ])
 
 crystal.calc = calc

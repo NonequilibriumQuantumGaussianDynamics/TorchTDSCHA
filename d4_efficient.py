@@ -4,7 +4,6 @@ from ase import Atoms
 from ase.build import molecule
 import numpy as np
 import sys
-from ase.calculators.lammpsrun import LAMMPS
 from ase.calculators.lammpslib import LAMMPSlib
 import cellconstructor as CC, cellconstructor.Phonons
 import cellconstructor.Structure, cellconstructor.calculators
@@ -33,7 +32,7 @@ calc = LAMMPSlib(
         atom_types={"Sr" : 1, "Ti" : 2, "O" : 3},
         lmpcmds=[
             "pair_style flare",
-            "pair_coeff * * /scratch/flibbi/sscha/SrTiO3_flare/srtio3.otf.flare"
+            "pair_coeff * * /n/netscratch/kozinsky_lab/Lab/libbi/calc_deriv/flare_potential/srtio3.otf.flare"
             ])
 crystal.calc = calc
 
@@ -80,8 +79,6 @@ if rank==0:
     print(numb)
     print(start_per_proc)
     print(end_per_proc)
-
-psi_s = np.load('psi_symm.npy')
 
 # Derivatives
 
