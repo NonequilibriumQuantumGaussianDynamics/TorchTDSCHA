@@ -6,6 +6,7 @@ import cellconstructor.Structure, cellconstructor.calculators
 from mpi4py import MPI
 import time
 from ase.calculators.emt import EMT
+from itertools import permutations
 
 
 def diff_4th(input_structure, calculator, what, eps = 1e-3):
@@ -236,34 +237,13 @@ def diff_4th(input_structure, calculator, what, eps = 1e-3):
                 deriv = vect[3:]
                 psi[i,k,l,:] = deriv 
 
-
         for l in range(nmod):
             for i in range(nmod):
                 for j in range(i,nmod):
                     for k in range(j,nmod):
-                        psi[i,j,l,k] = psi[i,j,k,l]
-                        psi[i,k,j,l] = psi[i,j,k,l]
-                        psi[i,k,l,j] = psi[i,j,k,l]
-                        psi[i,l,j,k] = psi[i,j,k,l]
-                        psi[i,l,k,j] = psi[i,j,k,l]
-                        psi[j,i,k,l] = psi[i,j,k,l]
-                        psi[j,i,l,k] = psi[i,j,k,l]
-                        psi[j,k,i,l] = psi[i,j,k,l]
-                        psi[j,k,l,i] = psi[i,j,k,l]
-                        psi[j,l,i,k] = psi[i,j,k,l]
-                        psi[j,l,k,i] = psi[i,j,k,l]
-                        psi[k,i,j,l] = psi[i,j,k,l]
-                        psi[k,i,l,j] = psi[i,j,k,l]
-                        psi[k,j,i,l] = psi[i,j,k,l]
-                        psi[k,j,l,i] = psi[i,j,k,l]
-                        psi[k,l,i,j] = psi[i,j,k,l]
-                        psi[k,l,j,i] = psi[i,j,k,l]
-                        psi[l,i,j,k] = psi[i,j,k,l]
-                        psi[l,i,k,j] = psi[i,j,k,l]
-                        psi[l,j,i,k] = psi[i,j,k,l]
-                        psi[l,j,k,i] = psi[i,j,k,l]
-                        psi[l,k,i,j] = psi[i,j,k,l]
-                        psi[l,k,j,i] = psi[i,j,k,l]
+                        val = psi[i,j,k,l]
+                        for p in set(permutations((i, j, k, l))):
+                            psi[p] = val
 
 
 
