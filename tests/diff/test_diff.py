@@ -1,10 +1,9 @@
 from ase import Atoms
-from ase.build import molecule
 import numpy as np
 from ase.calculators.emt import EMT
-from d2 import diff_2nd
-from d3_efficient import diff_3rd
-from d4_efficient import diff_4th
+from diff_2nd import diff_2nd
+from diff_3rd import diff_3rd
+from diff_4th import diff_4th
 
 def test_d2():
     input_structure = 'final_result'
