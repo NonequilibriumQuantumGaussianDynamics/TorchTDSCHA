@@ -1,7 +1,9 @@
 import numpy as np
 import copy
 #import h5py
-from model_multi import *
+#from model_multi import *
+from phonons import *
+
 from ase.io.vasp import read_vasp
 import cellconstructor as CC, cellconstructor.Phonons
 
@@ -31,20 +33,17 @@ def load_from_sscha(dyn_file, path, T, new_format = False, path_diff = ''):
     if not new_format:
         phi = read_phi(path)
         phi = phi/Ry_to_eV/A_to_B**2
-        #phi = np.einsum('i,j,ij->ij', sqrtm_inv, sqrtm_inv, phi)
         phi *= sqrtm_inv[:, None]
         phi *= sqrtm_inv[None, :]
 
         chi = read_chi(path)
         chi = chi/Ry_to_eV/A_to_B**3
-        #chi = np.einsum('i,j,k,ijk->ijk', sqrtm_inv, sqrtm_inv, sqrtm_inv, chi)
         chi *= sqrtm_inv[:,  None, None]  
         chi *= sqrtm_inv[ None,:,  None]  
         chi *= sqrtm_inv[ None,None,:]  
 
         psi = read_psi(path)
         psi = psi/Ry_to_eV/A_to_B**4
-        #psi = np.einsum('i,j,k,l,ijkl->ijkl', sqrtm_inv, sqrtm_inv, sqrtm_inv, sqrtm_inv, psi)
         psi *= sqrtm_inv[:,  None, None, None]
         psi *= sqrtm_inv[ None,:,  None, None]
         psi *= sqrtm_inv[ None,None,:,  None]
@@ -52,18 +51,15 @@ def load_from_sscha(dyn_file, path, T, new_format = False, path_diff = ''):
 
     else:
         phi = np.load(path_diff + '/phi.npy')
-        #phi = np.einsum('i,j,ij->ij', sqrtm_inv, sqrtm_inv, phi)
         phi *= sqrtm_inv[:, None]
         phi *= sqrtm_inv[None, :]
 
         chi = np.load(path_diff + '/chi.npy')
-        #chi = np.einsum('i,j,k,ijk->ijk', sqrtm_inv, sqrtm_inv, sqrtm_inv, chi)
         chi *= sqrtm_inv[:,  None, None]
         chi *= sqrtm_inv[ None,:,  None]
         chi *= sqrtm_inv[ None,None,:]
 
         psi = np.load(path_diff + '/psi.npy')
-        #psi = np.einsum('i,j,k,l,ijkl->ijkl', sqrtm_inv, sqrtm_inv, sqrtm_inv, sqrtm_inv, psi)
         psi *= sqrtm_inv[:,  None, None, None]
         psi *= sqrtm_inv[ None,:,  None, None]
         psi *= sqrtm_inv[ None,None,:,  None]
