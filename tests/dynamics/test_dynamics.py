@@ -1,6 +1,7 @@
 from ase import Atoms
 import numpy as np
-from model_multi import *
+from averages import *
+from dynamics import *
 from init import *
 import cellconstructor as CC, cellconstructor.Phonons
 
@@ -38,7 +39,6 @@ def test_dynamics():
     s1 = np.load('test_H2_0.npz')['arr_0']
 
     assert np.linalg.norm(s1-s0) < 1e-8
-
 
 
 
