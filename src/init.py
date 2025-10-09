@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import torch
 #import h5py
 #from model_multi import *
 from phonons import *
@@ -265,4 +266,23 @@ def read_solution(label, chunks):
 
 
 
-            
+def torch_init(R, P, A, B, C, masses, phi, chi, psi, dtype = torch.float64, grad_enabled = False):
+    
+    torch.set_grad_enabled(grad_enabled)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    phi    = torch.from_numpy(phi).to(device=device, dtype=dtype)
+    chi    = torch.from_numpy(chi).to(device=device, dtype=dtype)
+    psi    = torch.from_numpy(psi).to(device=device, dtype=dtype)
+    R      = torch.from_numpy(R).to(device=device, dtype=dtype)
+    P      = torch.from_numpy(P).to(device=device, dtype=dtype)
+    masses = torch.from_numpy(masses).to(device=device, dtype=dtype)
+    A      = torch.from_numpy(A).to(device=device, dtype=dtype)
+    B      = torch.from_numpy(B).to(device=device, dtype=dtype)
+    C      = torch.from_numpy(C).to(device=device, dtype=dtype)
+
+    return R, P, A, B, C, masses, phi, chi, psi
+
+
+
+
