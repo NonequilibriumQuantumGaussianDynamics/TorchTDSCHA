@@ -27,11 +27,11 @@ jobs:
         run: |
           conda create -n sscha -c conda-forge python=3.10 gfortran libblas lapack \
           openmpi openmpi-mpicc pip numpy scipy spglib=2.2 setuptools=64
+          conda activate sscha
           which python
           python -V
           python -m pip list
           pip install cellconstructor python-sscha 
-          conda activate sscha
 
       - name: Install dependencies
         run: |
