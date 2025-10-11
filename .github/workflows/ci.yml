@@ -29,7 +29,7 @@ jobs:
           openmpi openmpi-mpicc pip numpy scipy spglib=2.2 pkgconfig
           conda activate sscha
           pip install ase julia mpi4py
-          pip install cellconstructor python-ssch
+          pip install cellconstructor 
           which python
           python -V
           python -m pip list
