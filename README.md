@@ -15,30 +15,18 @@
 
 The method describes the nuclear quantum state as a **time-evolving Gaussian wavepacket**, whose centroid (`R, P`) and covariance matrices (`A, B, C`) obey deterministic coupled equations of motion:
 
-\[
-\dot{R}=P,\quad
-\dot{P}=F(R,A) - \gamma P + F_{\mathrm{ext}}(t)
-\]
-\[
-\dot{A}=C+C^\top,\quad
-\dot{B}=-[\kappa(R,A)C+( \kappa(R,A)C)^\top],\quad
-\dot{C}=B-A\kappa(R,A)
-\]
-
-Here:
-- \( F(R,A) \) and \( \kappa(R,A) \) are computed from harmonic, cubic, and quartic force constants \((\phi,\chi,\psi)\);
-- \( F_\mathrm{ext}(t) \) describes coupling to external fields via **Born effective charges**.
-
-The code integrates these equations using both:
-- a **NumPy/SciPy** backend (`solve_ivp`) for CPU,
-- and a **PyTorch** backend (`torchdiffeq`) for GPU acceleration.
-
 ---
 
 ## ⚙️ Installation
 
-This package is written in **Python ≥ 3.10** and interfaces with **ASE** and **CellConstructor** for atomistic force evaluations.  
+This package is written in **Python < 3.11** and interfaces with **ASE** and **CellConstructor**
+for atomistic structure management and force-constant data.  
+It includes a full **PyTorch-accelerated implementation** of the TDSCHA equations of motion,
+designed to speed up the computation of **quantum forces** and
+**potential energies**.
+
 A minimal conda environment can be created as follows:
+
 
 ```bash
 # Create and activate the environment
@@ -47,9 +35,7 @@ conda create -n sscha -c conda-forge python=3.10 gfortran libblas lapack \
 conda activate sscha
 
 # Install Python dependencies
-pip install ase julia mpi4py pytest
-pip install cellconstructor
-pip install torch torchdiffeq
+pip install ase mpi4py cellconstructor torch torchdiffeq
 
 # Clone and install this repository
 git clone https://github.com/NonequilibriumQuantumGaussianDynamics/exact_tdscha.git
