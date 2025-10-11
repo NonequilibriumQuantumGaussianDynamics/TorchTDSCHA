@@ -2,7 +2,7 @@ name: Python CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "**" ]
   pull_request:
     branches: [ "main" ]
 
@@ -26,18 +26,19 @@ jobs:
         shell: bash -l {0}
         run: |
           conda create -n sscha -c conda-forge python=3.10 gfortran libblas lapack \
-          openmpi openmpi-mpicc pip numpy scipy spglib=2.2 setuptools=64
+          openmpi openmpi-mpicc pip numpy scipy spglib=2.2 pkgconfig
+          conda activate sscha
+          pip install ase julia mpi4py pytest
+          pip install cellconstructor 
+          pip install torch torchdiffeq
           which python
           python -V
           python -m pip list
-          pip install cellconstructor python-sscha 
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest
+          pip install -e .
 
       - name: Run tests with pytest
+        shell: bash -l {0}
         run: |
+          which python   
+          python -V
           pytest -v

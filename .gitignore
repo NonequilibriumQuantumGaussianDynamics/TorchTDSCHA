@@ -1,2 +1,18 @@
-save/
-__pycache__
+# --- Standard Python ignores ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# --- Project specific ignores ---
+# Ignore only .npy files in tests/averages
+tests/averages/*.npy
+tests/large_dynamics/test_H2_0.npz

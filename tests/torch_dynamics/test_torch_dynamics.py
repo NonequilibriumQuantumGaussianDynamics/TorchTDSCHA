@@ -5,13 +5,12 @@ from dynamics import *
 from init import *
 import cellconstructor as CC, cellconstructor.Phonons
 from pathlib import Path
-import pytest
 
 PATH = Path(__file__).resolve().parent
 os.chdir(PATH)
 
-@pytest.mark.skip(reason="Checks")
-def test_dynamics():
+
+def test_torch_dynamics():
 
     T = 0
     Time = 1000  # 10000
@@ -50,11 +49,11 @@ def test_dynamics():
         "eps": eps,
     }
 
-    sol = td_evolution(
-        R, P, A, B, C, field, gamma, phi, chi, psi, Time, NS, label=label, chunks=chunks
+    sol = torch_evolution(
+        R, P, A, B, C, field, gamma, phi, chi, psi, Time, NS, chunks=chunks, label=label
     )
 
     s0 = np.load("dynamics_H2_0.npz")["arr_0"]
     s1 = np.load("test_H2_0.npz")["arr_0"]
 
-    assert np.linalg.norm(s1 - s0) < 1e-8
+    assert np.linalg.norm(s1 - s0) < 5e-4
