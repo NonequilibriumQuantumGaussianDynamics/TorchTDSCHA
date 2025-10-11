@@ -35,12 +35,9 @@ jobs:
           python -m pip list
           pip install cellconstructor python-sscha 
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest
-
       - name: Run tests with pytest
+        shell: bash -l {0}
         run: |
+          which python   
+          python -V
           pytest -v
