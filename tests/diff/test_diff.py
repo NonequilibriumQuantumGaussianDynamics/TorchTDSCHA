@@ -8,6 +8,7 @@ from pathlib import Path
 
 PATH = Path(__file__).resolve().parent
 
+
 def test_d2():
     input_structure = PATH / "final_result"
     calculator = EMT()
@@ -15,8 +16,8 @@ def test_d2():
 
     diff_2nd(input_structure, calculator, what)
 
-    phi = np.load( PATH / "phi.npy")
-    phi_test = np.load( PATH / "phi_test.npy")
+    phi = np.load(PATH / "phi.npy")
+    phi_test = np.load(PATH / "phi_test.npy")
     diff = np.linalg.norm(phi - phi_test)
 
     print("2nd derivatives error", diff)

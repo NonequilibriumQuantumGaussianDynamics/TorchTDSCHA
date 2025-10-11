@@ -11,6 +11,30 @@ import math
 
 
 def get_y0(R, P, A, B, C):
+    """
+    Pack initial state (R, P, A, B, C) into a single 1D vector for ODE integration.
+
+    State layout is:
+        y = [R(0:n), P(0:n), vec(A), vec(B), vec(C)]
+
+    Parameters
+    ----------
+    R : ndarray, shape (n,)
+        Initial displacements.
+    P : ndarray, shape (n,)
+        Initial momenta.
+    A : ndarray, shape (n, n)
+        Initial covariance matrix ⟨u_i u_j⟩.
+    B : ndarray, shape (n, n)
+        Initial mixed moment ⟨u_i p_j⟩ (or equivalent correlation).
+    C : ndarray, shape (n, n)
+        Initial covariance ⟨p_i u_j⟩ (or related correlation).
+
+    Returns
+    -------
+    ndarray, shape (2n + 3n^2,)
+        Flattened initial state vector.
+    """
 
     nmod = len(R)
     y0 = np.zeros(2 * nmod + 3 * nmod**2)
@@ -29,6 +53,22 @@ def get_y0(R, P, A, B, C):
 
 
 def get_y0_torch(R, P, A, B, C):
+    """
+    Torch version of `get_y0`: pack (R, P, A, B, C) into a 1D torch tensor.
+
+    Parameters
+    ----------
+    R : torch.Tensor, shape (n,)
+    P : torch.Tensor, shape (n,)
+    A : torch.Tensor, shape (n, n)
+    B : torch.Tensor, shape (n, n)
+    C : torch.Tensor, shape (n, n)
+
+    Returns
+    -------
+    torch.Tensor, shape (2n + 3n^2,)
+        Flattened initial state vector on the same device/dtype as inputs.
+    """
 
     nmod = len(R)
     y0 = torch.zeros(2 * nmod + 3 * nmod**2, dtype=R.dtype, device=R.device)
@@ -48,8 +88,35 @@ def get_y0_torch(R, P, A, B, C):
 
 
 def tdscha(t, y, phi, chi, psi, field, gamma):
+    """
+    Right-hand side of the TDSCHA ODE system (NumPy version).
 
-    print("time ", t * 4.8377687 * 1e-2)
+    Given y(t) = [R, P, vec(A), vec(B), vec(C)], compute dy/dt, using `force`, 
+    `kappa`, and 'ext_for` as drive. 
+
+    Parameters
+    ----------
+    t : float
+        Time (code units; input typically in a.u. after conversion).
+    y : ndarray, shape (2n + 3n^2,)
+        Current state vector.
+    phi : ndarray, shape (n, n)
+        Harmonic (second-order) force constants.
+    chi : ndarray, shape (n, n, n)
+        Third-order force constants.
+    psi : ndarray, shape (n, n, n, n)
+        Fourth-order force constants.
+    field : dict
+        External field specification; passed to `ext_for(t, field)`.
+    gamma : float
+        Linear damping coefficient for momenta.
+
+    Returns
+    -------
+    ndarray, shape (2n + 3n^2,)
+        Time derivative dy/dt.
+    """
+
     nmod = int((-2 + np.sqrt(4 + 12 * len(y))) / 6)
 
     R = y[:nmod]
@@ -86,8 +153,30 @@ def tdscha(t, y, phi, chi, psi, field, gamma):
 
 
 def tdscha_torch(t, y, phi, chi, psi, field, gamma):
+    """
+    Right-hand side of the TDSCHA ODE system (PyTorch version).
 
-    print("time ", t * 4.8377687 * 1e-2)
+    Same dynamics as `tdscha` but computed with torch tensors (GPU/autograd-friendly).
+
+    Parameters
+    ----------
+    t : torch.Tensor or float
+        Time value.
+    y : torch.Tensor, shape (2n + 3n^2,)
+        Current state vector.
+    phi : torch.Tensor, shape (n, n)
+    chi : torch.Tensor, shape (n, n, n)
+    psi : torch.Tensor, shape (n, n, n, n)
+    field : dict
+        External field parameters; used by `torch_ext_for`.
+    gamma : float or torch.Tensor
+        Damping coefficient.
+
+    Returns
+    -------
+    torch.Tensor, shape (2n + 3n^2,)
+        Time derivative dy/dt.
+    """
 
     L = y.numel()
     nmod = int((-2 + math.sqrt(4 + 12 * L)) / 6)
@@ -142,6 +231,43 @@ def td_evolution(
     chunks=1,
     label="solution",
 ):
+    """
+    Integrate TDSCHA dynamics with SciPy's `solve_ivp` (NumPy pipeline).
+
+    Time (fs) is converted internally to code units. Integration can be chunked to
+    save intermediate results to disk as compressed .npz files.
+
+    Parameters
+    ----------
+    R, P : ndarray, shape (n,)
+        Initial displacements and momenta.
+    A, B, C : ndarray, shape (n, n)
+        Initial second-moment/correlation matrices.
+    field : dict
+        External field specification (see `ext_for`).
+    gamma : float
+        Linear momentum damping.
+    phi : ndarray, shape (n, n)
+    chi : ndarray, shape (n, n, n)
+    psi : ndarray, shape (n, n, n, n)
+    Time : float
+        Total physical time in femtoseconds.
+    NS : int
+        Total number of evaluation points.
+    y0 : ndarray, optional
+        Pre-packed initial state; if None, built from (R,P,A,B,C).
+    init_t : float, default 0
+        Initial time in femtoseconds.
+    chunks : int, default 1
+        Split integration into `chunks` segments (each saved to disk).
+    label : str, default "solution"
+        Prefix for saved files (e.g., label_0.npz, label_1.npz).
+
+    Returns
+    -------
+    OdeResult
+        Final SciPy solution object from the last chunk.
+    """
     # om_L in THz, Time in fs
 
     init_t = init_t / (4.8377687 * 1e-2)
@@ -182,6 +308,40 @@ def torch_evolution(
     chunks=1,
     label="solution",
 ):
+    """
+    Integrate TDSCHA dynamics with `torchdiffeq.odeint` (PyTorch pipeline).
+
+    Converts inputs to torch tensors (double precision), moves to CPU/GPU,
+    and integrates in `chunks`. Each chunk is saved to compressed .npz.
+
+    Parameters
+    ----------
+    R, P : ndarray, shape (n,)
+    A, B, C : ndarray, shape (n, n)
+    field : dict
+        External field; `Zeff` and `edir` are converted to torch tensors.
+    gamma : float
+    phi : ndarray, shape (n, n)
+    chi : ndarray, shape (n, n, n)
+    psi : ndarray, shape (n, n, n, n)
+    Time : float
+        Total physical time in femtoseconds.
+    NS : int
+        Number of time points per full trajectory (split across chunks).
+    y0 : torch.Tensor, optional
+        Packed initial state; if None, built via `get_y0_torch`.
+    init_t : float, default 0
+        Initial time in femtoseconds.
+    chunks : int, default 1
+        Number of segments to split the integration.
+    label : str, default "solution"
+        Prefix used when saving each chunk.
+
+    Returns
+    -------
+    torch.Tensor, shape (NS_chunk, 2n + 3n^2)
+        Trajectory of the last chunk.
+    """
     # om_L in THz, Time in fs
 
     init_t = init_t / (4.8377687 * 1e-2)
@@ -211,6 +371,25 @@ def torch_evolution(
 
 
 def save(label, t, sol):
+    """
+    Save NumPy trajectory to a compressed .npz file as a single 2D array.
+
+    The first column is time, the remaining columns are the state vector y.
+
+    Parameters
+    ----------
+    label : str
+        Output filename prefix ('.npz' is appended by `np.savez_compressed`).
+    t : ndarray, shape (nt,)
+        Time grid.
+    sol : ndarray, shape (state_dim, nt)
+        State matrix in column-major time (as returned by `solve_ivp`: y(t)).
+
+    Returns
+    -------
+    None
+    """
+
     sol = np.transpose(sol)
     sh = np.shape(sol)
     sh = [sh[0], sh[1] + 1]
@@ -221,6 +400,24 @@ def save(label, t, sol):
 
 
 def save_torch(label, t, sol):
+    """
+    Save torch trajectory to a compressed .npz file as a single 2D array.
+
+    Converts tensors to NumPy and packs time as the first column.
+
+    Parameters
+    ----------
+    label : str
+        Output filename prefix.
+    t : torch.Tensor, shape (nt,)
+        Time grid.
+    sol : torch.Tensor, shape (nt, state_dim) or (state_dim, nt)
+        Trajectory; if time-major, it is concatenated with `t` appropriately.
+
+    Returns
+    -------
+    None
+    """
     t_np = t.detach().cpu().numpy()
     sol_np = sol.detach().cpu().numpy()
 
@@ -229,6 +426,29 @@ def save_torch(label, t, sol):
 
 
 def torch_init(phi, chi, psi, R, P, A, B, C, field):
+    """
+    Convert NumPy inputs to torch tensors (float64) and move to CPU/GPU.
+
+    Also converts `field['Zeff']` and `field['edir']` to tensors. Autograd is
+    disabled (the integration uses `no_grad()`).
+
+    Parameters
+    ----------
+    phi : ndarray, shape (n, n)
+    chi : ndarray, shape (n, n, n)
+    psi : ndarray, shape (n, n, n, n)
+    R, P : ndarray, shape (n,)
+    A, B, C : ndarray, shape (n, n)
+    field : dict
+        Must contain keys 'Zeff' (ndarray) and 'edir' (array-like).
+
+    Returns
+    -------
+    phi, chi, psi, R, P, A, B, C, field : torch.Tensor, ..., dict
+        Torch tensors on the selected device (GPU if available, else CPU),
+        with dtype=torch.float64. `field` is the same dict with 'Zeff' and 'edir'
+        replaced by torch tensors.
+    """
 
     torch.set_grad_enabled(False)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
