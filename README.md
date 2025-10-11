@@ -1,12 +1,11 @@
-# 📦 Exact_TDSCHA
+# 📦 TorchTDSCHA
 
 [![CI](https://github.com/NonequilibriumQuantumGaussianDynamics/exact_tdscha/actions/workflows/python-ci.yml/badge.svg)](https://github.com/NonequilibriumQuantumGaussianDynamics/exact_tdscha/actions/workflows/python-ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.10%20|%203.11-blue.svg)](https://www.python.org/downloads/)
 [![Backend](https://img.shields.io/badge/Backend-NumPy%20|%20PyTorch-orange.svg?logo=pytorch)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-*A Python package for simulating quantum nuclear dynamics of solids under ultrafast excitation,  
-based on the **Time-Dependent Stochastic Self-Consistent Harmonic Approximation (TD-SCHA)**.*
+*A Python package for simulating quantum nuclear dynamics of solids under ultrafast excitation.*
 
 ---
 
