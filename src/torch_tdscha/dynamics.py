@@ -1,13 +1,13 @@
 import numpy as np
 from scipy.integrate import solve_ivp
-
-from averages import force, kappa, ext_for
-from averages import torch_force, torch_kappa, torch_ext_for
-from phonons import *
-
 from torchdiffeq import odeint
 import torch
 import math
+
+from .averages import force, kappa, ext_for
+from .averages import torch_force, torch_kappa, torch_ext_for
+from .phonons import *
+
 
 
 def get_y0(R, P, A, B, C):

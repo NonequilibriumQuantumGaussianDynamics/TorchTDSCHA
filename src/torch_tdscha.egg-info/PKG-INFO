@@ -1,3 +1,21 @@
+Metadata-Version: 2.4
+Name: torch-tdscha
+Version: 0.1.0
+Summary: Exact implementation of the Time-Dependent Self-Consistent Harmonic Approximation (TDSCHA)
+Author-email: Francesco Libbi <libbi@g.harvard.edu>
+License: MIT
+Requires-Python: <3.11,>=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: ase
+Requires-Dist: torch
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+
 # 📦 TorchTDSCHA
 
 [![CI](https://github.com/NonequilibriumQuantumGaussianDynamics/TorchTDSCHA/actions/workflows/python-ci.yml/badge.svg)](https://github.com/NonequilibriumQuantumGaussianDynamics/TorchTDSCHA/actions/workflows/python-ci.yml)

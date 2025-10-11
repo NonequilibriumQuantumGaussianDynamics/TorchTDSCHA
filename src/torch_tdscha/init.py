@@ -4,7 +4,7 @@ import torch
 
 # import h5py
 # from model_multi import *
-from phonons import *
+from .phonons import get_AB
 
 from ase.io.vasp import read_vasp
 import cellconstructor as CC, cellconstructor.Phonons

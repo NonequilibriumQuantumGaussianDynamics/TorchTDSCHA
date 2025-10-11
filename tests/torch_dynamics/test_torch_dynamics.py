@@ -1,8 +1,7 @@
 from ase import Atoms
 import numpy as np
-from averages import *
-from dynamics import *
-from init import *
+from torch_tdscha.dynamics import *
+from torch_tdscha.init import *
 import cellconstructor as CC, cellconstructor.Phonons
 from pathlib import Path
 

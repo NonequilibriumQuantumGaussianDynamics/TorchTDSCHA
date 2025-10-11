@@ -1,9 +1,9 @@
 from ase import Atoms
 import numpy as np
 from ase.calculators.emt import EMT
-from diff_2nd import diff_2nd
-from diff_3rd import diff_3rd
-from diff_4th import diff_4th
+from torch_tdscha.diff_2nd import diff_2nd
+from torch_tdscha.diff_3rd import diff_3rd
+from torch_tdscha.diff_4th import diff_4th
 from pathlib import Path
 
 PATH = Path(__file__).resolve().parent

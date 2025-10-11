@@ -1,12 +1,12 @@
 from ase import Atoms
 import numpy as np
-from averages import *
-from dynamics import *
-from init import *
 import cellconstructor as CC, cellconstructor.Phonons
 import time
 from pathlib import Path
 
+from torch_tdscha.dynamics import td_evolution, torch_evolution
+from torch_tdscha.averages import force, kappa, av_V, torch_av_V, ext_for, torch_force, torch_kappa, torch_ext_for
+from torch_tdscha.init import load_from_sscha, read_charges
 
 #
 import torch

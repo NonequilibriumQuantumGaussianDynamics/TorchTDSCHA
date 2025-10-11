@@ -1,0 +1,10 @@
+numpy
+scipy
+ase
+torch
+
+[dev]
+pytest
+ruff
+black
+mypy
