@@ -1,49 +1,45 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Language-Python%203.10-blue?style=for-the-badge&logo=python"/>
-  <img src="https://img.shields.io/badge/Build-GitHub%20Actions-success?style=for-the-badge&logo=githubactions"/>
-  <img src="https://img.shields.io/badge/Backend-NumPy%20%7C%20PyTorch-orange?style=for-the-badge&logo=pytorch"/>
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge"/>
-</p>
+# 📦 Exact_TDSCHA
 
-<h1 align="center">TDSCHA</h1>
+[![CI](https://github.com/NonequilibriumQuantumGaussianDynamics/exact_tdscha/actions/workflows/python-ci.yml/badge.svg)](https://github.com/NonequilibriumQuantumGaussianDynamics/exact_tdscha/actions/workflows/python-ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.10%20|%203.11-blue.svg)](https://www.python.org/downloads/)
+[![Backend](https://img.shields.io/badge/Backend-NumPy%20|%20PyTorch-orange.svg?logo=pytorch)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+*A Python package for simulating quantum nuclear dynamics of solids under ultrafast excitation,  
+based on the **Time-Dependent Stochastic Self-Consistent Harmonic Approximation (TD-SCHA)**.*
 
 ---
 
-## 🧠 Theory
+## ✨ Overview
 
-The **Time-Dependent Self-Consistent Harmonic Approximation (TDSCHA)** is a non-perturbative extension of the stochastic self-consistent harmonic approximation (SSCHA) to **real-time dynamics** under **fast drive**.
+**Exact_TDSCHA** implements the **time-dependent extension** of the stochastic self-consistent harmonic approximation (SSCHA), allowing the **real-time propagation of quantum nuclei** in anharmonic potentials.
 
-It describes the **time evolution of quantum nuclei** beyond the harmonic limit by approximating the nuclear density as a **Gaussian wavepacket** evolving under an effective anharmonic potential.  
-This allows one to capture:
-
-- Finite-temperature quantum fluctuations of nuclei  
-- Anharmonic phonon renormalization  
-- Real-time dynamics of Gaussian nuclear states under external perturbations  
-- Ultrafast responses to optical or THz fields  
-
-The method propagates both **centroid coordinates and covariance matrices** (`R, P, A, B, C`) according to deterministic equations derived from Ehrenfest-like dynamics within the Gaussian ansatz.  
-
-Mathematically, the TDSCHA evolves the Gaussian state parameters as:
+The method describes the nuclear quantum state as a **time-evolving Gaussian wavepacket**, whose centroid (`R, P`) and covariance matrices (`A, B, C`) obey deterministic coupled equations of motion:
 
 \[
-\dot{R} = P, \quad
-\dot{P} = F(R, A) - \gamma P + F_\text{ext}(t)
+\dot{R}=P,\quad
+\dot{P}=F(R,A) - \gamma P + F_{\mathrm{ext}}(t)
 \]
-
 \[
-\dot{A} = C + C^T, \quad
-\dot{B} = -[\kappa(R, A) C + (\kappa(R, A) C)^T], \quad
-\dot{C} = B - A\kappa(R, A)
+\dot{A}=C+C^\top,\quad
+\dot{B}=-[\kappa(R,A)C+( \kappa(R,A)C)^\top],\quad
+\dot{C}=B-A\kappa(R,A)
 \]
 
-where the **force** \( F(R, A) \) and **curvature tensor** \( \kappa(R, A) \) include harmonic, cubic, and quartic force constants (φ, χ, ψ).  
-Coupling to an **external electric field** is handled through the **Born effective charges** and dielectric tensor.
+Here:
+- \( F(R,A) \) and \( \kappa(R,A) \) are computed from harmonic, cubic, and quartic force constants \((\phi,\chi,\psi)\);
+- \( F_\mathrm{ext}(t) \) describes coupling to external fields via **Born effective charges**.
+
+The code integrates these equations using both:
+- a **NumPy/SciPy** backend (`solve_ivp`) for CPU,
+- and a **PyTorch** backend (`torchdiffeq`) for GPU acceleration.
 
 ---
 
 ## ⚙️ Installation
 
-A lightweight Python environment (Python < 3.11) can be created using **conda**:
+This package is written in **Python ≥ 3.10** and interfaces with **ASE** and **CellConstructor** for atomistic force evaluations.  
+A minimal conda environment can be created as follows:
 
 ```bash
 # Create and activate the environment
@@ -51,7 +47,7 @@ conda create -n sscha -c conda-forge python=3.10 gfortran libblas lapack \
   openmpi openmpi-mpicc pip numpy scipy spglib pkgconfig -y
 conda activate sscha
 
-# Install required Python packages
+# Install Python dependencies
 pip install ase julia mpi4py pytest
 pip install cellconstructor
 pip install torch torchdiffeq
@@ -60,3 +56,6 @@ pip install torch torchdiffeq
 git clone https://github.com/NonequilibriumQuantumGaussianDynamics/exact_tdscha.git
 cd exact_tdscha
 pip install -e .
+
+
+
