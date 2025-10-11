@@ -5,6 +5,7 @@ from dynamics import *
 from init import *
 import cellconstructor as CC, cellconstructor.Phonons
 import time
+from pathlib import Path
 
 
 #
@@ -14,13 +15,15 @@ import torch
 def test_dynamics():
 
     T = 0
-    dyn = CC.Phonons.Phonons("../dynamics/final_result")
+
+    PATH = Path(__file__).resolve().parent.parent
+    dyn = CC.Phonons.Phonons(f"{PATH}/dynamics/final_result")
     om, eigv = dyn.DiagonalizeSupercell()
 
-    path_diff = "../dynamics"
-    path = "../dynamics"
+    path_diff = f"{PATH}/dynamics"
+    path = f"{PATH}/dynamics"
     nat, nmod, phi, chi, psi, R, P, masses, A, B, C = load_from_sscha(
-        "../dynamics/final_result", path, T, new_format=True, path_diff=path_diff
+        f"{PATH}/dynamics/final_result", path, T, new_format=True, path_diff=path_diff
     )
     R[0] += 0.1
 
