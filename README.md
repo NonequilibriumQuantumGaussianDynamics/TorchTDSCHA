@@ -5,13 +5,13 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge"/>
 </p>
 
-<h1 align="center">Time-Dependent Stochastic Self-Consistent Harmonic Approximation (TDSCHA)</h1>
+<h1 align="center">TDSCHA</h1>
 
 ---
 
 ## 🧠 Theory
 
-The **Time-Dependent Stochastic Self-Consistent Harmonic Approximation (TDSCHA)** is a non-perturbative extension of the stochastic self-consistent harmonic approximation (SSCHA) to **real-time dynamics** under **fast drive**.
+The **Time-Dependent Self-Consistent Harmonic Approximation (TDSCHA)** is a non-perturbative extension of the stochastic self-consistent harmonic approximation (SSCHA) to **real-time dynamics** under **fast drive**.
 
 It describes the **time evolution of quantum nuclei** beyond the harmonic limit by approximating the nuclear density as a **Gaussian wavepacket** evolving under an effective anharmonic potential.  
 This allows one to capture:
