@@ -8,6 +8,8 @@ from pathlib import Path
 
 PATH = Path(__file__).resolve().parent
 os.chdir(PATH)
+print('HERE PATH', PATH)
+
 
 def test_dynamics():
 
@@ -27,16 +29,16 @@ def test_dynamics():
 
     label = "test_H2"
 
-    dyn = CC.Phonons.Phonons( "final_result")
+    dyn = CC.Phonons.Phonons("final_result")
     om, eigv = dyn.DiagonalizeSupercell()
 
-    path_diff = '.'
-    path = '.'
+    path_diff = "."
+    path = "."
     nat, nmod, phi, chi, psi, R, P, masses, A, B, C = load_from_sscha(
-         "final_result", path, T, new_format=True, path_diff=path_diff
+        "final_result", path, T, new_format=True, path_diff=path_diff
     )
 
-    Zeff, eps = read_charges( "eps_charges", masses)
+    Zeff, eps = read_charges("eps_charges", masses)
     field = {
         "amp": Eamp,
         "freq": om_L,
@@ -56,5 +58,3 @@ def test_dynamics():
     s1 = np.load("test_H2_0.npz")["arr_0"]
 
     assert np.linalg.norm(s1 - s0) < 1e-8
-
-
