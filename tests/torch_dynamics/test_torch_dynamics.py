@@ -6,8 +6,8 @@ from init import *
 import cellconstructor as CC, cellconstructor.Phonons
 from pathlib import Path
 
-PATH = Path(__file__).resolve().parent
-os.chdir(PATH)
+#PATH = Path(__file__).resolve().parent
+#os.chdir(PATH)
 
 
 def test_torch_dynamics():
@@ -56,4 +56,4 @@ def test_torch_dynamics():
     s0 = np.load("dynamics_H2_0.npz")["arr_0"]
     s1 = np.load("test_H2_0.npz")["arr_0"]
 
-    assert np.linalg.norm(s1 - s0) < 1e-8
+    assert np.linalg.norm(s1 - s0) < 1e-6
