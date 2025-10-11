@@ -5,6 +5,7 @@ from dynamics import *
 from init import *
 import cellconstructor as CC, cellconstructor.Phonons
 from pathlib import Path
+import pytest
 
 PATH = Path(__file__).resolve().parent
 os.chdir(PATH)
