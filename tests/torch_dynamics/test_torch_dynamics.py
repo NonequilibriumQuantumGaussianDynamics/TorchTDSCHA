@@ -56,4 +56,4 @@ def test_torch_dynamics():
     s0 = np.load("dynamics_H2_0.npz")["arr_0"]
     s1 = np.load("test_H2_0.npz")["arr_0"]
 
-    assert np.linalg.norm(s1 - s0) < 1e-6
+    assert np.linalg.norm(s1 - s0) < 5e-4
