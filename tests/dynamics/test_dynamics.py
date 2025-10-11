@@ -12,7 +12,7 @@ print('HERE PATH', PATH)
 
 
 def test_dynamics():
-    print('HERE PATH', PATH
+    print('HERE PATH', PATH)
 
     T = 0
     Time = 1000  # 10000
