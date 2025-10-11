@@ -28,7 +28,7 @@ jobs:
           conda create -n sscha -c conda-forge python=3.10 gfortran libblas lapack \
           openmpi openmpi-mpicc pip numpy scipy spglib=2.2 pkgconfig
           conda activate sscha
-          pip install ase julia mpi4py
+          pip install ase julia mpi4py pytest
           pip install cellconstructor 
           which python
           python -V
