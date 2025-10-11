@@ -6,8 +6,8 @@ from init import *
 import cellconstructor as CC, cellconstructor.Phonons
 from pathlib import Path
 
-#PATH = Path(__file__).resolve().parent
-#os.chdir(PATH)
+PATH = Path(__file__).resolve().parent
+os.chdir(PATH)
 
 
 def test_torch_dynamics():
