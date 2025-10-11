@@ -118,7 +118,7 @@ def torch_kappa(R, A, phi, chi, psi):
     k1 = (1.0 / 2.0) * torch.matmul(psi_flat, R_flat)
     k2 = (1.0 / 2.0) * torch.matmul(psi_flat, A_flat)
 
-    k3 = np.einsum("ijk,k->ij", chi, R)
+    k3 = (chi.reshape(n * n, n) @ R).reshape(n, n)
 
     return phi + k1 + k2 + k3
 
