@@ -8,7 +8,7 @@ from pathlib import Path
 
 PATH = Path(__file__).resolve().parent
 os.chdir(PATH)
-print('HERE PATH', PATH)
+print('HERE PATH ', PATH)
 
 
 def test_dynamics():

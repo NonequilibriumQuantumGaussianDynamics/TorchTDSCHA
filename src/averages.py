@@ -5,6 +5,29 @@ import torch
 
 
 def force(R, A, phi, chi, psi):
+    """
+    Compute the total force acting on the nuclei from a 4th-order expansion
+    of the potential energy surface.
+
+    Parameters
+    ----------
+    R : ndarray (n,)
+        Displacement vector from equilibrium positions.
+    A : ndarray (n, n)
+        Covariance (or quantum fluctuation) matrix.
+    phi : ndarray (n, n)
+        Harmonic (second-order) force-constant matrix.
+    chi : ndarray (n, n, n)
+        Third-order force-constant tensor.
+    psi : ndarray (n, n, n, n)
+        Fourth-order force-constant tensor.
+
+    Returns
+    -------
+    ndarray (n,)
+        Total force vector including harmonic, cubic, quartic,
+        and quantum-correction terms.
+    """
 
     f1 = np.einsum("ij,j->i", phi, R)
     f3 = 1 / 6 * np.einsum("ijkl,j,k,l->i", psi, R, R, R, optimize="optimal")
@@ -16,14 +39,25 @@ def force(R, A, phi, chi, psi):
 
 
 def torch_force(R, A, phi, chi, psi):
+    """
+    PyTorch implementation of `force`, enabling GPU execution.
+
+    Parameters
+    ----------
+    R, A, phi, chi, psi : torch.Tensor
+        Same physical quantities as in `force`, represented as tensors.
+
+    Returns
+    -------
+    torch.Tensor
+        Total force vector.
+    """
 
     n = R.shape[0]
     psi_flat = psi.view(n, n, n * n)  # they are contiguous
     chi_flat = chi.view(n, n * n)
     A_flat = A.view(n * n)
     R_flat = torch.kron(R, R)
-
-    # Efficient replacement of einsum for psi, explotis contiguity
 
     f1 = torch.matmul(phi, R)
     f2 = 0.5 * torch.matmul(chi_flat, R_flat)
@@ -39,6 +73,20 @@ def torch_force(R, A, phi, chi, psi):
 
 
 def kappa(R, A, phi, chi, psi):
+    """
+    Compute the effective force-constant matrix (curvature tensor).
+
+    Parameters
+    ----------
+    R, A, phi, chi, psi : ndarray
+        Same quantities as in `force`.
+
+    Returns
+    -------
+    ndarray
+        Effective force constants tensor including third- and fourth-order corrections and quantum effects.
+    """
+
     k1 = 1 / 2 * np.einsum("ijkl, k,l->ij", psi, R, R, optimize="optimal")
     k2 = 1 / 2 * np.einsum("ijkl, kl->ij", psi, A, optimize="optimal")
 
@@ -48,6 +96,19 @@ def kappa(R, A, phi, chi, psi):
 
 
 def torch_kappa(R, A, phi, chi, psi):
+    """
+    PyTorch implementation of `kappa`, enabling GPU.
+
+    Parameters
+    ----------
+    R, A, phi, chi, psi : torch.Tensor
+        Same physical quantities as in `kappa`.
+
+    Returns
+    -------
+    torch.Tensor
+        Effective force-constants tensor.
+    """
 
     n = R.shape[0]
     psi_flat = psi.view(n, n, n * n)
@@ -63,6 +124,20 @@ def torch_kappa(R, A, phi, chi, psi):
 
 
 def av_V(R, A, phi, chi, psi):
+    """
+    Compute the average potential energy for a Gaussian distribution
+    centered at R with covariance A, up to fourth order in displacements.
+
+    Parameters
+    ----------
+    R, A, phi, chi, psi : ndarray
+        Displacement, covariance, and force-constant tensors.
+
+    Returns
+    -------
+    float
+        Expectation value of the quatnum potential energy.
+    """
 
     V0 = 1 / 2 * np.einsum("i,j,ij", R, R, phi)
     V1 = 1 / 2 * np.einsum("ij,ij", A, phi)
@@ -77,6 +152,19 @@ def av_V(R, A, phi, chi, psi):
 
 
 def torch_av_V(R, A, phi, chi, psi):
+    """
+    PyTorch implementation of `av_V`, computing the average potential
+    energy using tensor operations.
+
+    Parameters
+    ----------
+    R, A, phi, chi, psi : torch.Tensor
+
+    Returns
+    -------
+    torch.Tensor
+        Scalar potential energy.
+    """
 
     V0 = (1.0 / 2.0) * (R @ (phi @ R))
     V1 = (1.0 / 2.0) * torch.sum(phi * A)
@@ -99,6 +187,29 @@ def torch_av_V(R, A, phi, chi, psi):
 
 
 def ext_for(t, field):
+    """
+    Compute the external driving force as a function of time.
+
+    Parameters
+    ----------
+    t : float
+        Time (in atomic units or fs converted accordingly).
+    field : dict
+        Dictionary describing the external field:
+        - 'amp' : field amplitude (kV/cm)
+        - 'freq' : field frequency (THz)
+        - 'edir' : polarization direction (3-vector, normalized)
+        - 't0' : pulse center (fs)
+        - 'sig' : pulse width (fs)
+        - 'type' : waveform ('sine', 'pulse', 'gaussian1', 'gaussian2', 'sinc')
+        - 'Zeff' : effective charge tensor
+        - 'eps' : dielectric constant
+
+    Returns
+    -------
+    ndarray
+        External force vector acting on all vibrational coordinates.
+    """
 
     Eamp = field["amp"]
     om_L = field["freq"]
@@ -146,6 +257,22 @@ def ext_for(t, field):
 
 
 def torch_ext_for(t, field):
+    """
+    PyTorch implementation of `ext_for`, supporting tensor operations.
+
+    Parameters
+    ----------
+    t : float or torch.Tensor
+        Time value(s).
+    field : dict
+        Same field dictionary as in `ext_for`, with `torch.Tensor` values
+        for Zeff and edir.
+
+    Returns
+    -------
+    torch.Tensor
+        External force vector as a function of time.
+    """
 
     # Extract field parameters
     Eamp = field["amp"]
@@ -220,6 +347,24 @@ def torch_ext_for(t, field):
 
 
 def force_t(R, A, phi, chi, psi):
+    """
+    Compute the time-dependent force for trajectories R(t), A(t).
+
+    Parameters
+    ----------
+    R : ndarray (nt, n)
+        Time series of displacements.
+    A : ndarray (nt, n, n)
+        Time series of covariance matrices.
+    phi, chi, psi : ndarray
+        Harmonic, cubic, and quartic force-constant tensors.
+
+    Returns
+    -------
+    ndarray (nt, n)
+        Force vectors at each time step.
+    """
+
     # now R and A are function of time, first index
     f1 = np.einsum("ij,tj->ti", phi, R)
     f3 = 1 / 6 * np.einsum("ijkl,tj,tk,tl->ti", psi, R, R, R, optimize="optimal")
@@ -232,12 +377,44 @@ def force_t(R, A, phi, chi, psi):
 
 
 def av_d3(R, chi, psi):
+    """
+    Compute the third-order derivative tensor averaged over displacements R.
+
+    Parameters
+    ----------
+    R : ndarray (n,)
+        Displacement vector.
+    chi : ndarray (n, n, n)
+        Third-order force constants.
+    psi : ndarray (n, n, n, n)
+        Fourth-order force constants.
+
+    Returns
+    -------
+    ndarray (n, n, n)
+        Averaged third-order tensor.
+    """
+
     d3 = np.einsum("ijkl,l->ijk", psi, R)
     d3 = d3 + chi
     return d3
 
 
 def V_classic(R, phi, chi, psi):
+    """
+    Evaluate the potential energy at configuration R using the classical
+    Taylor expansion up to fourth order.
+
+    Parameters
+    ----------
+    R, phi, chi, psi : ndarray
+
+    Returns
+    -------
+    float
+        Classical potential energy value.
+    """
+
     V2 = 1 / 2 * np.einsum("ij,i,j", phi, R, R)
     V3 = 1 / 6 * np.einsum("ijk,i,j,k", chi, R, R, R, optimize="optimal")
     V4 = 1 / 24 * np.einsum("ijkl,i,j,k,l", psi, R, R, R, R, optimize="optimal")
@@ -246,6 +423,20 @@ def V_classic(R, phi, chi, psi):
 
 
 def f_classic(R, phi, chi, psi):
+    """
+    Compute the classical force from the Taylor-expanded potential
+    up to quartic order.
+
+    Parameters
+    ----------
+    R, phi, chi, psi : ndarray
+
+    Returns
+    -------
+    ndarray
+        Classical force vector.
+    """
+
     f1 = np.einsum("ij,j->i", phi, R)
     f3 = 1 / 6 * np.einsum("ijkl,j,k,l->i", psi, R, R, R)
     f2 = 1 / 2 * np.einsum("ijk,j,k->i", chi, R, R)
@@ -254,6 +445,22 @@ def f_classic(R, phi, chi, psi):
 
 
 def kappa_t(R, A, phi, chi, psi):
+    """
+    Time-dependent effective force-constants tensor kappa(t), computed for
+    time series of displacements and covariances.
+
+    Parameters
+    ----------
+    R : ndarray (nt, n)
+    A : ndarray (nt, n, n)
+    phi, chi, psi : ndarray
+
+    Returns
+    -------
+    ndarray (nt, n, n)
+        Effective force-constants tensors at each time.
+    """
+
     k1 = 1 / 2 * np.einsum("ijkl, tk,tl->tij", psi, R, R, optimize="optimal")
     k2 = 1 / 2 * np.einsum("ijkl, tkl->tij", psi, A, optimize="optimal")
 
@@ -263,30 +470,43 @@ def kappa_t(R, A, phi, chi, psi):
 
 
 def d2V(R, phi, chi, psi):
+    """
+    Compute the instantaneous second derivative of the potential energy
+    (Hessian) at configuration R.
+
+    Parameters
+    ----------
+    R : ndarray (n,)
+    phi, chi, psi : ndarray
+
+    Returns
+    -------
+    ndarray (n, n)
+        Second-derivative (Hessian) matrix.
+    """
+
     k1 = 1 / 2 * np.einsum("ijkl, k,l->ij", psi, R, R)
     k2 = np.einsum("ijk,k->ij", chi, R)
     return phi + k1 + k2
 
 
-def av_V(R, A, phi, chi, psi):
-
-    V0 = 1 / 2 * np.einsum("i,j,ij", R, R, phi)
-    V1 = 1 / 2 * np.einsum("ij,ij", A, phi)
-    V2 = 1 / 24 * np.einsum("ijkl,i,j,k,l", psi, R, R, R, R, optimize="optimal")
-    V3 = 1 / 4 * np.einsum("ijkl,i,j,kl", psi, R, R, A, optimize="optimal")
-    V4 = 1 / 8 * np.einsum("ijkl,ij,kl", psi, A, A, optimize="optimal")
-
-    # Q = np.einsum('s, is,js,ks,ls -> ijkl', lamb**2, vect, vect, vect, vect)
-    # V5 = 1/8*np.einsum('ijkl,ijkl', psi, Q)
-    # V5 = 1/8*np.einsum('ijkl,im,jm,km,lm,m', psi, vect, vect, vect, vect, lamb**2, optimize= 'optimal')
-
-    V6 = 1 / 6 * np.einsum("ijk,i,j,k", chi, R, R, R, optimize="optimal")
-    V7 = 1 / 2 * np.einsum("ijk,i,jk", chi, R, A, optimize="optimal")
-
-    return V0 + V1 + V2 + V3 + V4 + V6 + V7
-
 
 def av_V_t(R, A, phi, chi, psi):
+    """
+    Compute the time-dependent average potential energy ⟨V(t)⟩ for
+    trajectories of displacements R(t) and covariances A(t).
+
+    Parameters
+    ----------
+    R : ndarray (nt, n)
+    A : ndarray (nt, n, n)
+    phi, chi, psi : ndarray
+
+    Returns
+    -------
+    ndarray (nt,)
+        Average potential energy at each time step.
+    """
 
     V0 = 1 / 2 * np.einsum("ti,tj,ij->t", R, R, phi, optimize="optimal")
     V1 = 1 / 2 * np.einsum("tij,ij->t", A, phi, optimize="optimal")
