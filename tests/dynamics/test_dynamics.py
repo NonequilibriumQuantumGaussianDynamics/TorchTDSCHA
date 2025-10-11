@@ -10,7 +10,7 @@ import pytest
 PATH = Path(__file__).resolve().parent
 os.chdir(PATH)
 
-@pytest.mark.skip(reason="Temporarily disabled: crashes in CI, works locally")
+@pytest.mark.skip(reason="Checks")
 def test_dynamics():
 
     T = 0

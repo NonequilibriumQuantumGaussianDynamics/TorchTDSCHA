@@ -490,7 +490,6 @@ def d2V(R, phi, chi, psi):
     return phi + k1 + k2
 
 
-
 def av_V_t(R, A, phi, chi, psi):
     """
     Compute the time-dependent average potential energy ⟨V(t)⟩ for

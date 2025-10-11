@@ -11,6 +11,53 @@ import cellconstructor as CC, cellconstructor.Phonons
 
 
 def load_from_sscha(dyn_file, path, T, new_format=False, path_diff=""):
+    """
+    Load a TDSCHA model (φ, χ, ψ, R, P, masses, A, B, C) from SSCHA/CellConstructor outputs,
+    convert to atomic units, and mass-rescale tensors.
+
+    Parameters
+    ----------
+    dyn_file : str
+        Path/prefix to the CellConstructor dynamical matrix (e.g. "final_result").
+    path : str
+        Directory containing SPOSCAR and (optionally) fc{2,3,4}.hdf5.
+    T : float
+        Temperature (K) used to build Gaussian widths A, B via normal modes.
+    new_format : bool, optional
+        If True, read φ/χ/ψ from NumPy files in `path_diff` (phi.npy, chi.npy, psi.npy).
+        If False, read fc2/3/4 from HDF5 in `path`.
+    path_diff : str, optional
+        Folder with phi.npy/chi.npy/psi.npy when `new_format=True`.
+
+    Returns
+    -------
+    nat : int
+        Number of atoms.
+    nmod : int
+        Number of Cartesian DOF (3*nat).
+    phi : (nmod, nmod) ndarray
+        Mass-rescaled harmonic force constants in Ry/Bohr².
+    chi : (nmod, nmod, nmod) ndarray
+        Mass-rescaled third-order FCs in Ry/Bohr³.
+    psi : (nmod, nmod, nmod, nmod) ndarray
+        Mass-rescaled fourth-order FCs in Ry/Bohr⁴.
+    R : (nmod,) ndarray
+        Mass-weighted displacements (Bohr·sqrt(amu)).
+    P : (nmod,) ndarray
+        Initial conjugate momenta (zeros).
+    masses : (nmod,) ndarray
+        Cartesian mass array (amu) repeated per component.
+    A, B : (nmod, nmod) ndarray
+        Gaussian covariance/width matrices from normal modes at temperature T.
+    C : (nmod, nmod) ndarray
+        Initial mixed covariance (zeros).
+
+    Notes
+    -----
+    - Converts units: Å→Bohr, eV→Ry, and applies 1/sqrt(mass) scaling to FC tensors.
+    - Uses `dyn.DiagonalizeSupercell()` to obtain eigenvalues/eigenvectors,
+      then constructs A and B via `get_AB(om, eigv, T)`.
+    """
 
     Ry_to_eV = 13.60570397
     uma_to_Ry = 911.444175
@@ -77,6 +124,20 @@ def load_from_sscha(dyn_file, path, T, new_format=False, path_diff=""):
 
 
 def read_phi(path):
+    """
+    Read and reshape harmonic force constants (fc2.hdf5) to a (3N, 3N) matrix.
+
+    Parameters
+    ----------
+    path : str
+        Directory containing 'fc2.hdf5' with dataset 'fc2' of shape (N, 3, N, 3).
+
+    Returns
+    -------
+    phi : (3N, 3N) ndarray
+        Harmonic force constants with indices reordered to Cartesian-major layout.
+    """
+
     f2 = h5py.File(path + "/fc2.hdf5", "r")
     fc2 = f2["fc2"]
     nat = np.shape(fc2)[0]
@@ -86,6 +147,20 @@ def read_phi(path):
 
 
 def read_chi(path):
+    """
+    Read and reshape third-order force constants (fc3.hdf5) to a (3N, 3N, 3N) tensor.
+
+    Parameters
+    ----------
+    path : str
+        Directory containing 'fc3.hdf5' with dataset 'fc3' of shape (N, 3, N, 3, N, 3).
+
+    Returns
+    -------
+    chi : (3N, 3N, 3N) ndarray
+        Third-order force constants in Cartesian-major layout.
+    """
+
     f3 = h5py.File(path + "/fc3.hdf5", "r")
     fc3 = f3["fc3"]
     nat = np.shape(fc3)[0]
@@ -95,6 +170,20 @@ def read_chi(path):
 
 
 def read_psi(path):
+    """
+    Read and reshape fourth-order force constants (fc4.hdf5) to a (3N, 3N, 3N, 3N) tensor.
+
+    Parameters
+    ----------
+    path : str
+        Directory containing 'fc4.hdf5' with dataset 'fc4' of shape (N, 3, N, 3, N, 3, N, 3).
+
+    Returns
+    -------
+    psi : (3N, 3N, 3N, 3N) ndarray
+        Fourth-order force constants in Cartesian-major layout.
+    """
+
     f4 = h5py.File(path + "/fc4.hdf5", "r")
     fc4 = f4["fc4"]
     nat = np.shape(fc4)[0]
@@ -105,6 +194,44 @@ def read_psi(path):
 
 
 def reduce_model(modes, nmod, phi, chi, psi, R, P, A, B, C, eigv, Zeff):
+    """
+    Project the model onto a subset of normal modes and return reduced tensors/state.
+
+    Parameters
+    ----------
+    modes : list[int]
+        1-based indices of modes to keep.
+    nmod : int
+        Total number of modes (3N).
+    phi, chi, psi : ndarray
+        Force-constant tensors in Cartesian coordinates.
+    R, P : (nmod,) ndarray
+        Mass-weighted displacements and momenta.
+    A, B, C : (nmod, nmod) ndarray
+        Gaussian covariance/width/mixed matrices.
+    eigv : (nmod, nmod) ndarray
+        Normal-mode eigenvectors (columns).
+    Zeff : (nmod, 3) ndarray
+        Mass-weighted Born effective charges in Cartesian basis.
+
+    Returns
+    -------
+    nmod_red : int
+        Reduced number of modes.
+    phi_mu, chi_mu, psi_mu : ndarray
+        Tensors projected and sliced to the selected modes.
+    R_mu, P_mu : (nmod_red,) ndarray
+        State vectors in the reduced modal basis.
+    A_mu, B_mu, C_mu : (nmod_red, nmod_red) ndarray
+        Reduced Gaussian matrices.
+    Zeff_mu : (nmod_red, 3) ndarray
+        Effective charges in the reduced modal basis.
+
+    Notes
+    -----
+    - Uses eigenvector projections to go to modal basis, slices the selected
+      modes, then returns reduced data still in modal coordinates.
+    """
 
     print("Reducing model to ", modes)
     modes = [m - 1 for m in modes]
@@ -138,6 +265,30 @@ def reduce_model(modes, nmod, phi, chi, psi, R, P, A, B, C, eigv, Zeff):
 
 
 def isolate_couplings(modes, phi, chi, psi, eigv, exclude_diag=[]):
+    """
+    Zero out all couplings except those involving a chosen set of modes.
+
+    Parameters
+    ----------
+    modes : list[int]
+        1-based indices of modes whose intra-set couplings are retained.
+    phi, chi, psi : ndarray
+        FC tensors in Cartesian basis.
+    eigv : (nmod, nmod) ndarray
+        Normal-mode eigenvectors (columns).
+    exclude_diag : list[int], optional
+        1-based mode indices whose pure self-terms (ii, iii, iiii) are set to zero.
+
+    Returns
+    -------
+    phi_new, chi_new, psi_new : ndarray
+        Modified FC tensors transformed back to Cartesian basis.
+
+    Notes
+    -----
+    - Transforms FCs to modal basis, masks out-of-set couplings, optionally
+      removes diagonal self-terms, and transforms back to Cartesian coordinates.
+    """
 
     print("Reducing to ", modes)
     modes = [m - 1 for m in modes]
@@ -181,6 +332,29 @@ def isolate_couplings(modes, phi, chi, psi, eigv, exclude_diag=[]):
 
 
 def continue_evolution(fil):
+    """
+    Load a saved evolution chunk and return the final state as new initial conditions.
+
+    Parameters
+    ----------
+    fil : str
+        Path to a saved solution file ('.npz') produced by the evolution routines.
+
+    Returns
+    -------
+    R, P, A, B, C : ndarray
+        Last-time-step state reconstructed from the saved solution.
+    newlabel : str
+        Suggested label for the continuation output (original label + 'cont').
+    tfin : float
+        Final physical time of the loaded chunk (in fs).
+
+    Notes
+    -----
+    - Infers number of modes from the flattened state size.
+    - Converts back to matrices for A, B, C.
+    """
+
     sol = np.load(fil)["arr_0"]
     tfin = sol[-1, 0] * (4.8377687 * 1e-2)
 
@@ -203,6 +377,25 @@ def continue_evolution(fil):
 
 
 def merge_evolutions(fil, fil1, fil2=""):
+    """
+    Concatenate two (or three) time-evolution chunks into a single array.
+
+    Parameters
+    ----------
+    fil : str
+        First saved solution ('.npz') with key 'arr_0'.
+    fil1 : str
+        Second saved solution ('.npz').
+    fil2 : str, optional
+        Optional third saved solution ('.npz').
+
+    Returns
+    -------
+    merged : (N, M) ndarray
+        Concatenated array with time in the first column and state in the others;
+        overlapping first rows of subsequent chunks are skipped.
+    """
+
     sol = np.load(fil)["arr_0"]
     sol1 = np.load(fil1)["arr_0"]
     N1, x = np.shape(sol)
@@ -226,6 +419,36 @@ def merge_evolutions(fil, fil1, fil2=""):
 
 
 def read_charges(path, masses):
+    """
+    Read Born effective charges and dielectric constant from an input file.
+
+    The file must contain the electronic dielectric tensor and the Born effective
+    charge tensors for each atom.  This data is used to compute the coupling between
+    atomic displacements and an external electric field.
+
+    Parameters
+    ----------
+    filename : str
+        Path to the file containing the dielectric constant and Born effective
+        charges, typically generated by Density Functional Perturbation Theory
+        (DFPT) or an equivalent calculation.
+    masses : ndarray
+        Array of atomic masses (in atomic mass units) for all atoms in the structure.
+
+    Returns
+    -------
+    Zeff : ndarray, shape (3N, 3)
+        Mass-rescaled Born effective charge tensor, expressed in atomic units.
+    eps : float
+        Macroscopic dielectric constant (scalar, averaged over the tensor).
+
+    Notes
+    -----
+    - The Born effective charge tensor is divided by the square root of atomic
+      masses to yield mass-weighted charges consistent with the dynamical
+      variables of the TDSCHA formalism.
+    - Units are automatically converted to Rydberg atomic units.
+    """
 
     ff = open(path)
     lines = ff.readlines()
@@ -258,6 +481,30 @@ def read_charges(path, masses):
 
 
 def read_solution(label, chunks):
+    """
+    Load and stitch multiple saved evolution chunks into a single time series.
+
+    Parameters
+    ----------
+    label : str
+        Base label used when saving chunks (files named '{label}_{i}.npy' or '.npz').
+    chunks : int
+        Number of chunks to concatenate.
+
+    Returns
+    -------
+    t : (N,) ndarray
+        Time values concatenated across all chunks.
+    sol : (N, D) ndarray
+        State values (without the time column).
+
+    Notes
+    -----
+    - Assumes each chunk has identical state dimensionality and contiguous time.
+    - Skips duplicate first rows when concatenating is not handled here; use
+      `merge_evolutions` if overlap should be removed.
+    """
+
     for i in range(chunks):
         fil = np.load(label + "_%d.npy" % i)
         sh = np.shape(fil)
@@ -268,21 +515,3 @@ def read_solution(label, chunks):
     t = y[:, 0]
     sol = y[:, 1:]
     return t, sol
-
-
-def torch_init(R, P, A, B, C, masses, phi, chi, psi, dtype=torch.float64, grad_enabled=False):
-
-    torch.set_grad_enabled(grad_enabled)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    phi = torch.from_numpy(phi).to(device=device, dtype=dtype)
-    chi = torch.from_numpy(chi).to(device=device, dtype=dtype)
-    psi = torch.from_numpy(psi).to(device=device, dtype=dtype)
-    R = torch.from_numpy(R).to(device=device, dtype=dtype)
-    P = torch.from_numpy(P).to(device=device, dtype=dtype)
-    masses = torch.from_numpy(masses).to(device=device, dtype=dtype)
-    A = torch.from_numpy(A).to(device=device, dtype=dtype)
-    B = torch.from_numpy(B).to(device=device, dtype=dtype)
-    C = torch.from_numpy(C).to(device=device, dtype=dtype)
-
-    return R, P, A, B, C, masses, phi, chi, psi

@@ -11,6 +11,38 @@ import time
 
 
 def diff_3rd(input_structure, calculator, what, eps=1e-4):
+    """
+    Compute third-order derivatives of the potential energy surface (χ tensor)
+    by finite differences of forces or dynamical matrices.
+
+    Each Cartesian coordinate of each atom is displaced by ±eps; the resulting
+    variation of the second-derivative matrix (φ) is used to estimate the
+    third-order tensor χ_ijk.  The result is saved as "chi.npy".
+    Only the irreducible part of χ is computed explicitly; the remaining elements
+    are reconstructed by applying permutation symmetry over the (i, j, k) indices.
+
+    Parameters
+    ----------
+    input_structure : str
+        Specifies the structure source:
+          - "structure" : read from a generic "POSCAR" file.
+          - "dynamical_matrix" : load from an existing CellConstructor
+            object ("final_result").
+    calculator : ase.calculators.Calculator
+        ASE calculator providing forces and energies.
+    what : {"structure", "dynamical_matrix"}
+        Type of structural input (see above).
+    eps : float, optional
+        Finite-difference displacement in Å. Default is 1e-4.
+
+    Notes
+    -----
+    - Units are converted from eV/Å³ to Rydberg/Bohr³ using:
+          1 Å = 1.889725988 Bohr, 1 Ry = 13.60570397 eV.
+    - The resulting χ tensor has shape (3N, 3N, 3N), where N is the number of atoms.
+    - Saves "chi.npy" to disk as a NumPy binary file.
+    - The method scales linearly with 3N finite-difference evaluations of φ.
+    """
 
     comm = MPI.COMM_WORLD
     size = comm.Get_size()

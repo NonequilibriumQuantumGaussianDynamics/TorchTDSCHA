@@ -91,8 +91,8 @@ def tdscha(t, y, phi, chi, psi, field, gamma):
     """
     Right-hand side of the TDSCHA ODE system (NumPy version).
 
-    Given y(t) = [R, P, vec(A), vec(B), vec(C)], compute dy/dt, using `force`, 
-    `kappa`, and 'ext_for` as drive. 
+    Given y(t) = [R, P, vec(A), vec(B), vec(C)], compute dy/dt, using `force`,
+    `kappa`, and 'ext_for` as drive.
 
     Parameters
     ----------

@@ -10,6 +10,44 @@ from itertools import permutations
 
 
 def diff_4th(input_structure, calculator, what, eps=1e-3):
+    """
+    Compute fourth-order force constants (ψ tensor) by finite differences of
+    third-order tensors (χ) or atomic forces, evaluating only the irreducible
+    components and reconstructing the remaining ones by permutation symmetry.
+
+    Each Cartesian coordinate of each atom is displaced by ±eps, and the resulting
+    variation of the third-order force-constant tensor (χ) is used to estimate
+    ψ_ijkl. The computation is parallelized over independent atomic displacements
+    to accelerate evaluation on multi-core architectures or HPC clusters.
+
+    Parameters
+    ----------
+    input_structure : str
+        Specifies the source of the structural data:
+          - "structure" : read atomic positions from a generic "POSCAR" file.
+          - "dynamical_matrix" : load an existing CellConstructor
+            dynamical matrix stored in "final_result".
+    calculator : ase.calculators.Calculator
+        ASE calculator object used to compute atomic forces and energies.
+    what : {"structure", "dynamical_matrix"}
+        Type of structural input (see above).
+    eps : float, optional
+        Finite-difference displacement in Å. Default is 1e-3.
+
+    Notes
+    -----
+    - The routine computes only the irreducible components of ψ; the remaining
+      elements are reconstructed by enforcing the full permutation symmetry
+      over the indices (i, j, k, l).
+    - Parallelization: atomic displacements and force evaluations are distributed
+      across multiple MPI ranks or CPU cores using the `mpi4py` or internal
+      CellConstructor parallel interface.
+    - Units are converted from eV/Å⁴ to Rydberg/Bohr⁴ using:
+          1 Å = 1.889725988 Bohr, 1 Ry = 13.60570397 eV.
+    - The resulting ψ tensor has shape (3N, 3N, 3N, 3N), where N is the number
+      of atoms.
+    - The computed ψ tensor is saved to disk as "psi.npy".
+    """
 
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
