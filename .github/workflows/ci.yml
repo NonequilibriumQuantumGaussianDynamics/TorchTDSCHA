@@ -30,7 +30,7 @@ jobs:
           conda activate sscha
           pip install ase julia mpi4py pytest
           pip install cellconstructor 
-          pip install torch
+          pip install torch torchdiffeq
           which python
           python -V
           python -m pip list
