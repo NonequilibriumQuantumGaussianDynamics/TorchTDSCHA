@@ -33,7 +33,7 @@ jobs:
           which python
           python -V
           python -m pip list
-          pip install cellconstructor python-sscha 
+          pip install -e
 
       - name: Run tests with pytest
         shell: bash -l {0}
