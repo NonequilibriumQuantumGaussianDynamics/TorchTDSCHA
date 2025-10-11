@@ -14,13 +14,13 @@ import torch
 def test_dynamics():
 
     T = 0
-    dyn = CC.Phonons.Phonons("final_result")
+    dyn = CC.Phonons.Phonons("../dynamics/final_result")
     om, eigv = dyn.DiagonalizeSupercell()
 
-    path_diff = "."
-    path = "."
+    path_diff = "../dynamics"
+    path = "../dynamics"
     nat, nmod, phi, chi, psi, R, P, masses, A, B, C = load_from_sscha(
-        "final_result", path, T, new_format=True, path_diff=path_diff
+        "../dynamics/final_result", path, T, new_format=True, path_diff=path_diff
     )
     R[0] += 0.1
 
