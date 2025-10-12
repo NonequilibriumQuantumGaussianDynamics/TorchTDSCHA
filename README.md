@@ -11,15 +11,15 @@
 
 ## ✨ Overview
 
-**Exact_TDSCHA** implements the **time-dependent extension** of the stochastic self-consistent harmonic approximation (SSCHA), allowing the **real-time propagation of quantum nuclei** in anharmonic potentials.
+**TorchTDSCHA** implements the **time-dependent extension** of the self-consistent harmonic approximation (TDSCHA), allowing the **real-time propagation of quantum nuclei** in anharmonic potentials.
 
-The method describes the nuclear quantum state as a **time-evolving Gaussian wavepacket**, whose centroid (`R, P`) and covariance matrices (`A, B, C`) obey deterministic coupled equations of motion:
+It solves the TDSCHA integro-differential equations through exact Gaussian integration of the quantum forces, powered by PyTorch for massive GPU acceleration of the underlying tensor algebra.
 
 ---
 
 ## ⚙️ Installation
 
-This package is written in **Python < 3.11** and interfaces with **ASE** and **CellConstructor**
+This package is written in **Python** and interfaces with **ASE** and **CellConstructor**
 for atomistic structure management and force-constant data.  
 It includes a full **PyTorch-accelerated implementation** of the TDSCHA equations of motion,
 designed to speed up the computation of **quantum forces** and
@@ -41,6 +41,13 @@ pip install ase mpi4py cellconstructor torch torchdiffeq
 git clone https://github.com/NonequilibriumQuantumGaussianDynamics/TorchTDSCHA.git
 cd TorchTDSCHA
 pip install -e .
+```
+
+---
+
+Details about the numerical methods can be found at
+> F. Libbi *et al.*, *Quantum cooling below absolute zero", arXiv:2505.22791, https://arxiv.org/abs/2505.22791 
+> F. Libbi *et al.*, *Atomistic simulations of out-of-equilibrium quantum nuclear dynamics*, npj Computational Materials  11, 144 (2025) https://doi.org/10.1038/s41524-025-01588-4
 
 
 
