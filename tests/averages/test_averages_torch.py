@@ -17,13 +17,13 @@ def test_dynamics():
     T = 0
 
     PATH = Path(__file__).resolve().parent.parent
-    dyn = CC.Phonons.Phonons(f"{PATH}/dynamics/final_result")
+    dyn = CC.Phonons.Phonons(f"{PATH}/torch_dynamics/final_result")
     om, eigv = dyn.DiagonalizeSupercell()
 
-    path_diff = f"{PATH}/dynamics"
-    path = f"{PATH}/dynamics"
+    path_diff = f"{PATH}/torch_dynamics"
+    path = f"{PATH}/torch_dynamics"
     nat, nmod, phi, chi, psi, R, P, masses, A, B, C = load_from_sscha(
-        f"{PATH}/dynamics/final_result", path, T, new_format=True, path_diff=path_diff
+        f"{PATH}/torch_dynamics/final_result", path, T, new_format=True, path_diff=path_diff
     )
     R[0] += 0.1
 
