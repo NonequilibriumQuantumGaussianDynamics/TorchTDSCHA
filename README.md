@@ -1,6 +1,6 @@
 # 📦 TorchTDSCHA
 
-[![CI](https://github.com/NonequilibriumQuantumGaussianDynamics/TorchTDSCHA/actions/workflows/python-ci.yml/badge.svg)](https://github.com/NonequilibriumQuantumGaussianDynamics/TorchTDSCHA/actions/workflows/python-ci.yml)
+[![CI](https://github.com/NonequilibriumQuantumGaussianDynamics/TorchTDSCHA/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/NonequilibriumQuantumGaussianDynamics/TorchTDSCHA/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.10%20|%203.11-blue.svg)](https://www.python.org/downloads/)
 [![Backend](https://img.shields.io/badge/Backend-NumPy%20|%20PyTorch-orange.svg?logo=pytorch)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
