@@ -45,6 +45,8 @@ pip install -e .
 
 ---
 
+## 📖 References
+
 Details about the numerical methods can be found at
 > F. Libbi *et al.*, *Quantum cooling below absolute zero", arXiv:2505.22791, https://arxiv.org/abs/2505.22791 
 > F. Libbi *et al.*, *Atomistic simulations of out-of-equilibrium quantum nuclear dynamics*, npj Computational Materials  11, 144 (2025) https://doi.org/10.1038/s41524-025-01588-4
