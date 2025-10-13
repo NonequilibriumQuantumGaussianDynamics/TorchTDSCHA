@@ -6,7 +6,6 @@ import math
 
 from .averages import force, kappa, ext_for
 from .averages import torch_force, torch_kappa, torch_ext_for
-from .phonons import *
 
 
 

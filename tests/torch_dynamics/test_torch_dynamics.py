@@ -3,6 +3,7 @@ import numpy as np
 from torch_tdscha.dynamics import *
 from torch_tdscha.init import *
 import cellconstructor as CC, cellconstructor.Phonons
+import os
 from pathlib import Path
 
 PATH = Path(__file__).resolve().parent

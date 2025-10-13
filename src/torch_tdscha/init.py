@@ -3,7 +3,6 @@ import copy
 import torch
 
 # import h5py
-# from model_multi import *
 from .phonons import get_AB
 
 from ase.io.vasp import read_vasp
