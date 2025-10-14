@@ -451,7 +451,7 @@ def torch_init(phi, chi, psi, R, P, A, B, C, field):
 
     torch.set_grad_enabled(False)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.float64
+    dtype = torch.float32
 
     phi = torch.from_numpy(phi).to(device=device, dtype=dtype)
     chi = torch.from_numpy(chi).to(device=device, dtype=dtype)
