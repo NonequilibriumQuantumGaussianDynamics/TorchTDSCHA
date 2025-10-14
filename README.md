@@ -4,6 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%20|%203.11-blue.svg)](https://www.python.org/downloads/)
 [![Backend](https://img.shields.io/badge/Backend-NumPy%20|%20PyTorch-orange.svg?logo=pytorch)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue?style=for-the-badge)](https://nonequilibriumquantumgaussiandynamics.github.io/TorchTDSCHA/)
 
 *A Python package for simulating quantum nuclear dynamics of solids under ultrafast excitation.*
 
