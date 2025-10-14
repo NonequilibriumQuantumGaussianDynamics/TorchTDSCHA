@@ -360,7 +360,7 @@ def torch_evolution(
         # sol = solve_ivp(func, tspan, y0, t_eval=t_eval, args=(phi, chi,  psi, field, gamma))
         with torch.no_grad():
             func = lambda t, y: tdscha_torch(t, y, phi, chi, psi, field, gamma)
-            sol = odeint(func, y0, tspan, method="dopri5")
+            sol = odeint(func, y0, tspan, method="rk4")
         save_torch(label + "_%d" % i, tspan, sol)
 
         y0 = sol[-1]
