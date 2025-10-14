@@ -298,7 +298,7 @@ def inv_Phi(fom, feigv):
     Returns
     -------
     inv_phi : (3N, 3N) ndarray
-        Matrix ∑_k |e_k⟩⟨e_k| / ω_k^2 excluding acoustic modes.
+        Matrix \sum_k |e_k⟩⟨e_k| / ω_k^2 excluding acoustic modes.
     """
 
     om, eigv = remove_translations(fom, feigv)
